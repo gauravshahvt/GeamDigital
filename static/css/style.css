@@ -1,0 +1,83 @@
+/* Custom Styling for PDF to Excel Studio */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Editable Spreadsheet Grid Styling */
+#editableGrid {
+    background-color: #ffffff;
+    user-select: text;
+}
+
+#editableGrid th {
+    background-color: #1e3a8a;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#editableGrid td {
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+    outline: none;
+    transition: background-color 0.15s ease;
+}
+
+#editableGrid tr:nth-child(even) td {
+    background-color: #f8fafc;
+}
+
+#editableGrid td:hover {
+    background-color: #eff6ff !important;
+}
+
+#editableGrid td:focus {
+    background-color: #ffffff !important;
+    box-shadow: inset 0 0 0 2px #3b82f6;
+    border-color: #3b82f6;
+}
+
+/* Row Header index column */
+#editableGrid th.row-index,
+#editableGrid td.row-index {
+    width: 36px;
+    min-width: 36px;
+    background-color: #f1f5f9;
+    color: #64748b;
+    text-align: center;
+    font-weight: 600;
+    font-size: 10px;
+    border-right: 2px solid #cbd5e1;
+    user-select: none;
+}
+
+/* Active Tab indicator */
+.table-tab.active {
+    background-color: #ffffff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}

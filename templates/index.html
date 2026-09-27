@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geam Digital | बहु-वार्ड (Multi-Ward) मतदाता सूची से एक्सेल कनवर्टर</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0f2942',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-slate-900 via-sky-900 to-emerald-700 flex items-center justify-center text-white shadow-md shadow-sky-900/20">
+                    <i data-lucide="layers" class="w-6 h-6 text-emerald-400"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-xl text-slate-900 tracking-tight">Geam Digital</span>
+                        <span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Multi-Ward Panchayat Pro</span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium">पंचायत के सभी वार्डों (जैसे 1 से 9 वार्ड) की पीडीएफ से बहु-शीट एक्सेल जनरेटर</p>
+                </div>
+            </div>
+
+            <!-- Header Action Badges & Quick Multi-Ward Demo -->
+            <div class="flex items-center space-x-3">
+                <div class="hidden md:flex items-center space-x-2 text-xs">
+                    <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        मल्टी-पीडीएफ इंजन सक्रिय
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
+                        <i data-lucide="sheet" class="w-3.5 h-3.5"></i>
+                        वार्ड सारांश + संयुक्त सूची
+                    </span>
+                </div>
+
+                <button type="button" id="quickSampleVoterBtn" class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                    <i data-lucide="play-circle" class="w-4 h-4"></i>
+                    <span>डेमो 3 वार्ड्स पंचायत चलाएं</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Mandatory 10 Columns Row-Wise Feature Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold px-2.5 py-0.5 rounded-full uppercase">बहु-वार्ड ऑटो-सीक्वेंस</span>
+                        <h2 class="text-lg md:text-xl font-bold tracking-tight text-white">शीट 1: सभी वार्डों का सारांश | शीट 2: वार्ड 1, वार्ड 2... क्रमवार 10 कॉलम सूची</h2>
+                    </div>
+                    <p class="text-xs text-slate-300">
+                        एक पंचायत के सभी वार्ड (जैसे 9 वार्डों की 9 पीडीएफ) एक साथ अपलोड करें। पहली शीट पर सारांश और दूसरी शीट पर अनुक्रम अनुसार सम्पूर्ण सूची:
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="inline-flex items-center gap-1 bg-sky-500/20 text-sky-200 border border-sky-400/30 px-3 py-1 rounded-lg font-medium">
+                        <i data-lucide="table-2" class="w-3.5 h-3.5"></i> पहली शीट: वार्ड सारांश
+                    </span>
+                    <span class="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 px-3 py-1 rounded-lg font-medium">
+                        <i data-lucide="arrow-down-narrow-wide" class="w-3.5 h-3.5"></i> दूसरी शीट: वार्ड 1 फिर वार्ड 2...
+                    </span>
+                    <span class="inline-flex items-center gap-1 bg-rose-500/20 text-rose-200 border border-rose-400/30 px-3 py-1 rounded-lg font-medium">
+                        <i data-lucide="user-x" class="w-3.5 h-3.5"></i> विलोपित (DELETED) बाहर
+                    </span>
+                </div>
+            </div>
+
+            <!-- 11 Column Tags Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-11 gap-2 pt-4 text-center">
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-sky-300 font-bold">1</span>
+                    <span class="text-xs font-bold text-white">भाग संख्या</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-sky-300 font-bold">2</span>
+                    <span class="text-xs font-bold text-white">क्रम संख्या</span>
+                    <span class="block text-[9px] text-slate-300">(1 से अंतिम)</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-emerald-300 font-bold">3</span>
+                    <span class="text-xs font-bold text-white">नाम</span>
+                    <span class="block text-[9px] text-slate-300">(साफ हिंदी)</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-emerald-300 font-bold">4</span>
+                    <span class="text-xs font-bold text-white">पिता/पति का नाम</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-amber-300 font-bold">5</span>
+                    <span class="text-xs font-bold text-white">आयु</span>
+                    <span class="block text-[9px] text-slate-300">(नंबर)</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-amber-300 font-bold">6</span>
+                    <span class="text-xs font-bold text-white">मोबाइल नो</span>
+                    <span class="block text-[9px] text-amber-200">(खाली)</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-sky-300 font-bold">7</span>
+                    <span class="text-xs font-bold text-white">वोटर ID</span>
+                    <span class="block text-[9px] text-slate-300">(EPIC)</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-sky-300 font-bold">8</span>
+                    <span class="text-xs font-bold text-white">हाउस नंबर</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-emerald-300 font-bold">9</span>
+                    <span class="text-xs font-bold text-white">एड्रेस</span>
+                </div>
+                <div class="bg-white/10 hover:bg-white/15 p-2 rounded-xl border border-white/10 transition">
+                    <span class="block text-[10px] text-emerald-300 font-bold">10</span>
+                    <span class="text-xs font-bold text-white">बूथ का पता</span>
+                </div>
+                <div class="bg-gradient-to-b from-rose-500/30 to-rose-600/30 hover:from-rose-500/40 hover:to-rose-600/40 p-2 rounded-xl border border-rose-400/50 shadow-sm transition">
+                    <span class="block text-[10px] text-rose-300 font-bold">11</span>
+                    <span class="text-xs font-extrabold text-white">Status</span>
+                    <span class="block text-[9px] text-rose-200">(Active/Deleted)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Form Section (Supports Multiple PDFs) -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+            <form id="uploadForm" class="space-y-5">
+                <!-- Dropzone Area -->
+                <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/30 rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 group relative">
+                    <input type="file" id="fileInput" name="pdf_files" accept=".pdf" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
+                        <div class="w-16 h-16 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors shadow-inner">
+                            <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                        </div>
+                        <div class="text-slate-800 text-base sm:text-lg">
+                            <span class="font-bold text-emerald-600">पंचायत के सभी वार्डों की पीडीएफ चुनें</span> या एक साथ यहाँ ड्रैग & ड्रॉप (Drag & Drop) करें
+                        </div>
+                        <p class="text-xs text-slate-500 max-w-md">
+                            आप 1 से लेकर 9, 15 या जितने भी वार्ड हों, सभी पीडीएफ एक साथ चुन सकते हैं (Multiple PDFs Supported)
+                        </p>
+                        <!-- Selected Files Summary Container -->
+                        <div id="selectedFilesBox" class="hidden flex-col items-center gap-2 mt-2">
+                            <div class="inline-flex text-xs font-bold text-emerald-700 bg-emerald-100/70 px-4 py-1.5 rounded-full border border-emerald-300 items-center gap-2">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                <span id="filesCountText">0 Files Chosen</span>
+                            </div>
+                            <div id="filesListBadges" class="flex flex-wrap items-center justify-center gap-1.5 max-w-xl max-h-24 overflow-y-auto pt-1">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit / Settings Action Bar -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="autoDownloadCheck" checked class="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500">
+                            <span class="ml-2.5 text-xs font-bold text-slate-700">⚡ प्रोसेसिंग होते ही एक्सेल (.xlsx) स्वतः डाउनलोड करें</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <button type="submit" id="convertBtn" class="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            <span id="convertBtnText">सभी वार्ड प्रोसेस करें और संपूर्ण पंचायत एक्सेल पाएं</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Loading Spinner & Step Progress -->
+            <div id="loadingIndicator" class="hidden mt-8 text-center py-8 space-y-4">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-200 border-t-emerald-600"></div>
+                <div class="space-y-1">
+                    <p id="loadingStatusText" class="text-sm font-bold text-slate-800">सभी वार्डों की मतदाता सूची का विश्लेषण किया जा रहा है...</p>
+                    <p class="text-xs text-slate-500">वार्ड पहचान • विलोपन सूची पृथक्करण • हिंदी नाम OCR • शीट 1 सारांश + शीट 2 क्रमबद्ध सूची</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace (Hidden until results arrive) -->
+        <section id="resultsWorkspace" class="hidden space-y-6">
+
+            <!-- Hero Success & Instant Excel Download Action Card -->
+            <div id="quickDownloadHero" class="bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 text-white rounded-2xl shadow-xl p-6 flex flex-col md:flex-row items-center justify-between gap-5 border border-emerald-600/40">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 shadow-inner">
+                        <i data-lucide="file-spreadsheet" class="w-8 h-8 text-emerald-200"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] bg-emerald-950/60 uppercase tracking-widest font-bold px-2.5 py-0.5 rounded-full text-emerald-300">Geam Digital Verified</span>
+                            <span id="quickStatsBadge" class="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-bold">3 Wards • 750+ Voters</span>
+                        </div>
+                        <h2 id="quickDownloadTitle" class="text-lg md:text-xl font-extrabold mt-1 text-white tracking-tight">सम्पूर्ण पंचायत एक्सेल शीट तैयार है!</h2>
+                        <p id="quickDownloadSubtitle" class="text-xs text-emerald-100 mt-0.5">
+                            शीट 1: सभी वार्डों का सारांश • शीट 2: वार्ड 1, फिर वार्ड 2... अनुक्रम अनुसार 10-कॉलम सम्पूर्ण सूची
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto shrink-0">
+                    <button type="button" id="heroDownloadBtn" class="w-full md:w-auto px-7 py-3.5 bg-white text-emerald-900 hover:bg-emerald-50 active:scale-95 font-extrabold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer">
+                        <i data-lucide="download" class="w-5 h-5 text-emerald-700"></i>
+                        <span>डाउनलोड सम्पूर्ण पंचायत एक्सेल (.xlsx)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SHEET 1: Wards Summary Section (पहली शीट पर सभी वार्डों की सारांश) -->
+            <div id="wardsSummarySection" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                            <i data-lucide="sheet" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                एक्सेल शीट 1: सभी वार्डों का सारांश (Wards Summary)
+                            </h3>
+                            <p class="text-[11px] text-slate-500">प्रत्येक वार्ड के वैध मतदाता, विलोपित मतदाता, बूथ एवं एड्रेस का विवरण</p>
+                        </div>
+                    </div>
+                    <span id="summaryWardsCountBadge" class="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-3 py-1 rounded-full">3 वार्ड्स सम्मिलित</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table id="summaryGridTable" class="w-full border-collapse text-xs border border-slate-300">
+                        <!-- Populated dynamically via JS -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- SHEET 2: Master 10-Column Spreadsheet Studio (दूसरी शीट पर वार्ड 1 फिर वार्ड 2...) -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                
+                <!-- Table Header & Controls Bar -->
+                <div class="p-4 bg-slate-100 border-b border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2 w-full md:w-auto">
+                        <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-xs">
+                            <i data-lucide="table" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-extrabold text-slate-900 uppercase tracking-wider block">
+                                एक्सेल शीट 2: 10-कॉलम मतदाता डेटाबेस
+                            </span>
+                            <span class="text-[11px] text-slate-500">पहले वार्ड 1, फिर वार्ड 2... अनुक्रम अनुसार (1 से अंतिम क्रम संख्या)</span>
+                        </div>
+                    </div>
+
+                    <!-- Ward View Switcher Dropdown & Live Search -->
+                    <div class="flex items-center space-x-2.5 w-full md:w-auto flex-wrap sm:flex-nowrap">
+                        <!-- Ward Filter Dropdown -->
+                        <div class="relative w-full sm:w-auto">
+                            <select id="wardViewSelect" class="w-full sm:w-auto text-xs font-bold bg-white border border-slate-300 rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-emerald-500 text-slate-800 cursor-pointer appearance-none shadow-2xs">
+                                <option value="master">📌 समस्त वार्ड (संयुक्त अनुक्रम - Master Sheet)</option>
+                                <!-- Wards populated dynamically -->
+                            </select>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                        </div>
+
+                        <!-- Search Input -->
+                        <div class="relative w-full sm:w-56">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="searchInput" placeholder="नाम, क्रम, EPIC, मकान से खोजें..." class="w-full text-xs pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Sub-bar: Badges & Edit Tools -->
+                <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2 text-xs">
+                    <div class="flex items-center space-x-2.5">
+                        <span id="tableInfoBadge" class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold">0 Records</span>
+                        <!-- Status Filter Toggle Group -->
+                        <div class="inline-flex rounded-lg border border-slate-300 p-0.5 bg-slate-100 text-[11px] font-bold" id="statusFilterGroup">
+                            <button type="button" id="filterStatusAll" class="px-2 py-0.5 rounded-md bg-white shadow-2xs text-slate-800 cursor-pointer transition">सभी</button>
+                            <button type="button" id="filterStatusActive" class="px-2 py-0.5 rounded-md text-emerald-700 hover:bg-white/60 cursor-pointer transition">🟢 Active</button>
+                            <button type="button" id="filterStatusDeleted" class="px-2 py-0.5 rounded-md text-rose-700 hover:bg-white/60 cursor-pointer transition">🔴 Deleted</button>
+                        </div>
+                        <button type="button" id="copyTsvBtn" class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded font-semibold text-slate-700 flex items-center gap-1 cursor-pointer">
+                            <i data-lucide="copy" class="w-3.5 h-3.5 text-sky-600"></i> कॉपी डेटा (Copy TSV)
+                        </button>
+                    </div>
+                    <div class="text-slate-500 italic text-[11px]">
+                        💡 किसी भी सेल पर क्लिक करके संपादन (edit) कर सकते हैं
+                    </div>
+                </div>
+
+                <!-- Interactive Editable Table Wrapper -->
+                <div class="p-2 overflow-auto max-h-[550px]">
+                    <table id="editableGrid" class="w-full border-collapse text-xs border border-slate-300">
+                        <!-- Populated dynamically via JS -->
+                    </table>
+                </div>
+
+                <!-- Bottom Export Bar -->
+                <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2 text-xs">
+                        <label class="font-bold text-slate-600">थीम:</label>
+                        <select id="themeSelect" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 text-xs font-semibold focus:ring-1 focus:ring-emerald-500">
+                            <option value="geam_digital">Geam Digital Pro</option>
+                            <option value="navy">Corporate Navy</option>
+                            <option value="emerald">Emerald Finance</option>
+                            <option value="charcoal">Modern Slate</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                        <button type="button" id="exportCsvBtn" class="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> CSV
+                        </button>
+                        <button type="button" id="exportExcelBtn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center gap-2 shadow-sm transition cursor-pointer">
+                            <i data-lucide="download" class="w-4 h-4"></i> Download All Sheets (.xlsx)
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-5">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 font-medium">
+            <div class="flex items-center space-x-2">
+                <span class="font-bold text-slate-800">Geam Digital</span>
+                <span>&bull;</span>
+                <span>बहु-वार्ड (Multi-Ward) मतदाता सूची से एक्सेल शीट जनरेटर</span>
+            </div>
+            <div>
+                शीट 1: सारांश • शीट 2: अनुक्रम अनुसार 10 कॉलम • विलोपित (DELETED) बाहर
+            </div>
+        </div>
+    </footer>
+
+    <!-- App JavaScript -->
+    <script src="/static/js/app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
