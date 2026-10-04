@@ -60,13 +60,17 @@ from pdf_engine.age_voter_list import (
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max upload for batch voter lists
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
-EXPORT_FOLDER = os.path.join(os.path.dirname(__file__), 'exports')
+IS_VERCEL = bool(os.environ.get('VERCEL'))
+BASE_DIR = '/tmp' if IS_VERCEL else os.path.dirname(__file__)
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+EXPORT_FOLDER = os.path.join(BASE_DIR, 'exports')
 SAMPLES_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'samples')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(EXPORT_FOLDER, exist_ok=True)
-os.makedirs(SAMPLES_FOLDER, exist_ok=True)
+if not IS_VERCEL:
+    os.makedirs(SAMPLES_FOLDER, exist_ok=True)
 
 # In-memory session stores
 SESSION_CACHE = {}

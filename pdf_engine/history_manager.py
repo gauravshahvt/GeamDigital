@@ -4,7 +4,9 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-HISTORY_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'history.json')
+IS_VERCEL = bool(os.environ.get('VERCEL'))
+DATA_DIR = '/tmp/data' if IS_VERCEL else os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+HISTORY_FILE = os.path.join(DATA_DIR, 'history.json')
 MAX_HISTORY_ENTRIES = 200
 
 # Hindi month names for friendly display
