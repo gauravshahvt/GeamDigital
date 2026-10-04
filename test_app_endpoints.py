@@ -6,7 +6,7 @@ client = app.test_client()
 print("1. Testing GET /")
 res = client.get('/')
 assert res.status_code == 200, f"Expected 200, got {res.status_code}"
-assert b"PDF to Excel Studio" in res.data
+assert b"Geam Digital" in res.data
 print("   Passed!")
 
 print("2. Testing GET /api/status")
@@ -60,7 +60,7 @@ v_table = voter_data['data']['tables'][0]['data']
 # Header row + 255 voter rows = 256 rows total
 print(f"   Extracted Voter Grid: {len(v_table)} rows x {len(v_table[0])} columns!")
 assert len(v_table) == 256, f"Expected 256 rows (header + 255 voters), got {len(v_table)}"
-assert v_table[0] == ['भाग संख्या', 'क्रम संख्या', 'नाम', 'पिता/पति का नाम', 'आयु', 'मोबाइल नो', 'वोटर ID', 'हाउस नंबर', 'एड्रेस', 'बूथ का पता']
+assert v_table[0] == ['वार्ड नं.', 'क्रम संख्या', 'नाम', 'पिता/पति का नाम', 'आयु', 'मोबाइल नो', 'वोटर ID', 'हाउस नंबर', 'एड्रेस', 'बूथ का पता', 'Status']
 print("   Columns match requested format 100%!")
 
 # Export voter excel

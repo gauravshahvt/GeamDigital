@@ -30,6 +30,10 @@ exports/*
 !exports/.gitkeep
 exports/*.xlsx
 
+# Runtime Data
+data/*
+!data/.gitkeep
+
 # Temporary fonts / artifacts
 *.ttf
 

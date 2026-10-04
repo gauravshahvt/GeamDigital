@@ -190,7 +190,7 @@ def format_excel_sheet(ws, theme_name: str = 'navy', is_invoice: bool = False):
                 elif val_str == 'active':
                     cell.font = Font(name=font_family, size=10, bold=True, color="065F46")
                     cell.fill = PatternFill(start_color="ECFDF5", end_color="ECFDF5", fill_type="solid")
-            elif header_name in ['भाग संख्या', 'क्रम संख्या', 'आयु', 'मोबाइल नो', 'वोटर ID', 'हाउस नंबर', 'क्र.सं.', 'वार्ड / भाग संख्या', 'कुल मतदाता', 'सक्रिय (Active)', 'विलोपित (Deleted)', 'वैध सक्रिय मतदाता']:
+            elif header_name in ['वार्ड नं.', 'वार्ड संख्या', 'वार्ड नं', 'भाग संख्या', 'क्रम संख्या', 'आयु', 'मोबाइल नो', 'वोटर ID', 'हाउस नंबर', 'क्र.सं.', 'वार्ड / भाग संख्या', 'कुल मतदाता', 'सक्रिय (Active)', 'विलोपित (Deleted)', 'वैध सक्रिय मतदाता']:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
             elif isinstance(val, (int, float)):
                 cell.alignment = Alignment(horizontal="right", vertical="center")
