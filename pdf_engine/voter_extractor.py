@@ -6,6 +6,20 @@ import pytesseract
 from PIL import Image
 import pandas as pd
 
+_TESSERACT_AVAILABLE: Optional[bool] = None
+
+def is_tesseract_available() -> bool:
+    """Checks whether tesseract binary is actually installed and accessible."""
+    global _TESSERACT_AVAILABLE
+    if _TESSERACT_AVAILABLE is not None:
+        return _TESSERACT_AVAILABLE
+    try:
+        pytesseract.get_tesseract_version()
+        _TESSERACT_AVAILABLE = True
+    except Exception:
+        _TESSERACT_AVAILABLE = False
+    return _TESSERACT_AVAILABLE
+
 def sanitize_hindi_orthography(text: str) -> str:
     """Corrects common Devanagari OCR ligatures, duplicate halants, and scan artifacts."""
     if not text:
@@ -356,7 +370,13 @@ def decode_corrupted_rajasthan_hindi(text: str) -> str:
         ('कमलश', 'कमलेश'), ('मनयन', 'मनीष'), ('शजत', 'शांति'), ('दरल', 'देवी'),
         ('पजर', 'पूजा'), ('जयगल', 'योगी'), ('मरजर', 'माया'), ('टममच', 'टम्मू'),
         ('पजररल', 'प्यारी'), ('रयशन', 'रोशन'), ('सलतर', 'सीता'), ('बशशल', 'बंशी'),
-        ('सचखर', 'सुखा')
+        ('सचखर', 'सुखा'), ('ककलरश', 'कैलाश'), ('सयहन', 'सोहन'), ('पचषपर', 'पुष्पा'),
+        ('दकाल', 'देवी'), ('दकरल', 'देवी'), ('शमरर', 'शर्मा'), ('कचमररत', 'कुमावत'),
+        ('सचरकश', 'सुरेश'), ('मचककश', 'मुकेश'), ('चनन', 'चन्द'), ('गयलरद', 'गोविन्द'),
+        ('गयनरनद', 'गोविन्द'), ('दलपक', 'दीपक'), ('भगरतल', 'भगवती'), ('कतषण', 'कृष्ण'),
+        ('कापतर', 'कान्ता'), ('मपजब', 'मंजू'), ('अमबरलाल', 'अम्बालाल'), ('अमबर', 'अम्बा'),
+        ('अमरल', 'अमरा'), ('ररज', 'राज'), ('जयरत', 'ज्योति'), ('ससप', 'सिंह'),
+        ('ससह', 'सिंह'), ('कचर', 'कुंवर'), ('कपर', 'कंवर'), ('ररम', 'राम')
     ]
     res = text
     for old, new in replacements:
@@ -399,14 +419,17 @@ def extract_voter_list_metadata(doc: pymupdf.Document) -> Dict[str, str]:
     ward_m = re.search(r'(?:वार्ड\s*क्रमांक|ररडर\s*कमरपक|भाग\s*संख्या)\s*[:\-\s]*([0-9]+)', p1_text)
     if ward_m:
         part_no = ward_m.group(1).strip()
-    else:
+    elif is_tesseract_available():
         # OCR Fallback
-        pix = p1.get_pixmap(dpi=150)
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        p1_ocr = pytesseract.image_to_string(img, lang="hin+eng")
-        ocr_m = re.search(r'(?:वार्ड\s*क्रमांक|भाग\s*संख्या)\s*[:\-\s]*([0-9]+)', p1_ocr)
-        if ocr_m:
-            part_no = ocr_m.group(1).strip()
+        try:
+            pix = p1.get_pixmap(dpi=150)
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            p1_ocr = pytesseract.image_to_string(img, lang="hin+eng")
+            ocr_m = re.search(r'(?:वार्ड\s*क्रमांक|भाग\s*संख्या)\s*[:\-\s]*([0-9]+)', p1_ocr)
+            if ocr_m:
+                part_no = ocr_m.group(1).strip()
+        except Exception:
+            pass
 
     # Jila Parishad (जि. प.) & Panchayat Samiti (पं. स.)
     def _to_ascii_digits(val: str) -> str:
@@ -440,10 +463,14 @@ def extract_voter_list_metadata(doc: pymupdf.Document) -> Dict[str, str]:
     panchayat_samiti = _to_ascii_digits(ps_m.group(1)) if ps_m else ""
 
     # Booth Address
-    # In cover page, search for booth pattern
-    pix = p1.get_pixmap(dpi=200)
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    p1_ocr = pytesseract.image_to_string(img, lang="hin+eng")
+    p1_ocr = ""
+    if is_tesseract_available():
+        try:
+            pix = p1.get_pixmap(dpi=200)
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            p1_ocr = pytesseract.image_to_string(img, lang="hin+eng")
+        except Exception:
+            p1_ocr = ""
 
     # Fallback to OCR if Jila Parishad or Panchayat Samiti still empty
     if not jila_parishad and p1_ocr:
@@ -455,7 +482,7 @@ def extract_voter_list_metadata(doc: pymupdf.Document) -> Dict[str, str]:
         if m:
             panchayat_samiti = _to_ascii_digits(m.group(1))
     
-    booth_m = re.search(r'(?:मतदान\s*बूथ\s*की\s*संख्या\s*एवं\s*पता|मतदान\s*केन्द्र\s*की\s*संख्या\s*(?:व|एवं)\s*नाम|मतदान\s*स्थल)\s*[:\-\s]*([^\n]+)', p1_ocr)
+    booth_m = re.search(r'(?:मतदान\s*बूथ\s*की\s*संख्या\s*एवं\s*पता|मतदान\s*केन्द्र\s*की\s*संख्या\s*(?:व|एवं)\s*नाम|मतदान\s*स्थल)\s*[:\-\s]*([^\n]+)', p1_ocr) if p1_ocr else None
     if booth_m:
         booth_raw = booth_m.group(1).strip()
         booth_address = re.sub(r'[\r\n|]+', ' ', booth_raw).strip()
@@ -463,7 +490,7 @@ def extract_voter_list_metadata(doc: pymupdf.Document) -> Dict[str, str]:
             booth_address = "45 - राजकीय प्राथमिक विद्यालय बागमाली कमरा नंबर 1"
     else:
         # Search digital text as fallback
-        booth_dm = re.search(r'(?:मतदान\s*बूथ|मतदान\s*केन्द्र)[^\n]*?([0-9]+\s*-\s*[^\n]+)', p1_text)
+        booth_dm = re.search(r'(?:मतदान\s*बूथ|मतदान\s*केन्द्र|मतदान\s*स्थल)[^\n]*?([0-9]+\s*-\s*[^\n]+)', p1_text)
         if booth_dm:
             booth_address = booth_dm.group(1).strip()
         else:
@@ -716,20 +743,25 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
 
             # Extract Names via narrow crop OCR
             # y0+13 avoids leaking top serial/EPIC box line; x0+108 captures full names without clipping photo box
-            name_crop_rect = pymupdf.Rect(x0 + 1, y0 + 13, x0 + 108, y0 + 52)
-            pix = p.get_pixmap(matrix=mat, clip=name_crop_rect)
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            ocr_lines = []
+            if is_tesseract_available():
+                try:
+                    name_crop_rect = pymupdf.Rect(x0 + 1, y0 + 13, x0 + 108, y0 + 52)
+                    pix = p.get_pixmap(matrix=mat, clip=name_crop_rect)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-            ocr_txt = pytesseract.image_to_string(img, lang="hin", config="--psm 6").strip()
-            ocr_lines = [l.strip() for l in ocr_txt.split('\n') if l.strip()]
+                    ocr_txt = pytesseract.image_to_string(img, lang="hin", config="--psm 6").strip()
+                    ocr_lines = [l.strip() for l in ocr_txt.split('\n') if l.strip()]
 
-            # Fallback for house number from OCR if card_text didn't have it
-            if not house and ocr_txt:
-                m_ocr = re.search(r'(?:मकान|हाउस|House)\s*(?:संख्या|सं\.?|नं\.?|नंबर|नम्बर|क्र\.?)?\s*[:\-\.=\'\"]*\s*([^\n\r]+?)(?=\s*(?:आयु|लिंग|Photo|$))', ocr_txt, re.IGNORECASE)
-                if m_ocr:
-                    cand = clean_house_number_text(m_ocr.group(1).strip())
-                    if cand and not any(k in cand for k in ['आयु', 'आजच', 'लिंग', 'ललग', 'फोटो', 'Photo']):
-                        house = cand
+                    # Fallback for house number from OCR if card_text didn't have it
+                    if not house and ocr_txt:
+                        m_ocr = re.search(r'(?:मकान|हाउस|House)\s*(?:संख्या|सं\.?|नं\.?|नंबर|नम्बर|क्र\.?)?\s*[:\-\.=\'\"]*\s*([^\n\r]+?)(?=\s*(?:आयु|लिंग|Photo|$))', ocr_txt, re.IGNORECASE)
+                        if m_ocr:
+                            cand = clean_house_number_text(m_ocr.group(1).strip())
+                            if cand and not any(k in cand for k in ['आयु', 'आजच', 'लिंग', 'ललग', 'फोटो', 'Photo']):
+                                house = cand
+                except Exception:
+                    ocr_lines = []
 
             voter_name = ""
             relative_name = ""
@@ -773,14 +805,17 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
                 relative_name = clean_hindi_name(relative_name)
 
             # Final fallback for age if still empty: OCR bottom area
-            if not age:
-                age_crop_rect = pymupdf.Rect(x0 + 1, y0 + 46, x0 + 115, y1 - 1)
-                pix_age = p.get_pixmap(matrix=mat, clip=age_crop_rect)
-                img_age = Image.frombytes("RGB", [pix_age.width, pix_age.height], pix_age.samples)
-                ocr_age_txt = pytesseract.image_to_string(img_age, lang="hin+eng", config="--psm 6")
-                digits = re.findall(r'\b(1[89]|[2-9]\d|1[01]\d)\b', ocr_age_txt)
-                if digits:
-                    age = int(digits[0])
+            if not age and is_tesseract_available():
+                try:
+                    age_crop_rect = pymupdf.Rect(x0 + 1, y0 + 46, x0 + 115, y1 - 1)
+                    pix_age = p.get_pixmap(matrix=mat, clip=age_crop_rect)
+                    img_age = Image.frombytes("RGB", [pix_age.width, pix_age.height], pix_age.samples)
+                    ocr_age_txt = pytesseract.image_to_string(img_age, lang="hin+eng", config="--psm 6")
+                    digits = re.findall(r'\b(1[89]|[2-9]\d|1[01]\d)\b', ocr_age_txt)
+                    if digits:
+                        age = int(digits[0])
+                except Exception:
+                    pass
 
             # Gender extraction
             gender = ""
