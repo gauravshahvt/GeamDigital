@@ -1,19 +1,33 @@
 @echo off
-chcp 65001 > nul
 title Geam Digital - District Voter Studio Desktop App
-cls
 echo ===============================================================================
-echo        🏛️ GEAM DIGITAL - DISTRICT AUTOMATED VOTER EXCEL STUDIO (DESKTOP APP)
-echo        सम्पूर्ण ज़िला: पंचायत समिति ➔ ग्राम पंचायत ➔ सभी वार्ड्स एक्सेल ऑटोमेशन GUI
+echo        GEAM DIGITAL - DISTRICT AUTOMATED VOTER EXCEL STUDIO (DESKTOP APP)
+echo        Full District: Samiti -^> Panchayat -^> All Wards Auto Excel GUI
 echo ===============================================================================
 echo.
-echo ⏳ Starting District Desktop Application...
+echo [1/2] Checking Python environment...
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python is not found on your system PATH!
+    pause
+    exit /b 1
+)
+
+echo [2/2] Checking dependencies...
+python -c "import customtkinter, openpyxl, fitz, pandas" >nul 2>&1
+if errorlevel 1 (
+    echo Installing missing dependencies...
+    pip install -r requirements.txt
+)
+
+echo.
+echo Starting Desktop Application...
 echo.
 
 python district_app.py
 
-if %ERRORLEVEL% NEQ 0 (
+if errorlevel 1 (
     echo.
-    echo ❌ Application exited with an error. Please see details above.
+    echo [ERROR] Application exited with an error code.
     pause
 )
