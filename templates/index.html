@@ -139,6 +139,11 @@
                     <span>फ़ीचर 6: युवा एवं बुजुर्ग वोटर लिस्ट</span>
                     <span class="bg-teal-100 text-teal-900 text-[10px] px-1.5 py-0.5 rounded-md font-extrabold uppercase">18-26 / 120-70</span>
                 </button>
+                <button type="button" id="tabDistrictBtn" class="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-extrabold transition text-slate-600 hover:text-slate-900 hover:bg-white/70 cursor-pointer">
+                    <i data-lucide="folder-tree" class="w-4 h-4 text-cyan-600"></i>
+                    <span>फ़ीचर 7: सम्पूर्ण ज़िला ऑटो-बैच (District Automation)</span>
+                    <span class="bg-cyan-100 text-cyan-900 text-[10px] px-1.5 py-0.5 rounded-md font-extrabold uppercase">Auto-District</span>
+                </button>
             </div>
 
             <!-- Context Badge -->
@@ -2330,6 +2335,265 @@
                     </div>
                 </div>
 
+            </section>
+
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- FEATURE 7 CONTAINER: DISTRICT AUTOMATED VOTER EXCEL STUDIO     -->
+        <!-- ============================================================== -->
+        <div id="districtContainer" class="hidden space-y-6">
+
+            <!-- Hero Banner Card -->
+            <div class="bg-gradient-to-r from-slate-900 via-cyan-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span class="bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-xs font-bold px-2.5 py-0.5 rounded-full uppercase flex items-center gap-1.5">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                ज़िला-स्तरीय पूर्ण ऑटोमेशन
+                            </span>
+                            <h2 class="text-lg md:text-xl font-bold tracking-tight text-white">सम्पूर्ण ज़िला वोटर एक्सेल ऑटोमेशन (District Automated Batch Processing)</h2>
+                        </div>
+                        <p class="text-xs text-slate-300">
+                            ज़िले के मुख्य फ़ोल्डर का पाथ दें। यह इंजन अपने-आप प्रत्येक <strong>पंचायत समिति</strong> ➔ <strong>ग्राम पंचायत</strong> ➔ <strong>सभी वार्ड्स की PDF</strong> को ढूँढकर उनकी 13-कॉलम मल्टी-शीट एक्सेल उसी संबंधित फ़ोल्डर में बनाकर सहेजेगा!
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                            Tesseract OCR पावर्ड
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Feature Highlights Badges -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 text-xs">
+                    <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
+                        <i data-lucide="folder-search" class="w-5 h-5 text-cyan-400 shrink-0"></i>
+                        <div>
+                            <div class="font-bold text-slate-200">ऑटो-फ़ोल्डर डिटेक्शन</div>
+                            <div class="text-[11px] text-slate-400">समिति व पंचायत स्वतः पहचान</div>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
+                        <i data-lucide="layers" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+                        <div>
+                            <div class="font-bold text-slate-200">सभी वार्ड्स एक साथ</div>
+                            <div class="text-[11px] text-slate-400">वार्ड 1 से N क्रमबद्ध बहु-शीट</div>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
+                        <i data-lucide="save" class="w-5 h-5 text-amber-400 shrink-0"></i>
+                        <div>
+                            <div class="font-bold text-slate-200">उसी फ़ोल्डर में सेव</div>
+                            <div class="text-[11px] text-slate-400">पंचायत फ़ोल्डर में ही स्वतः सहेजना</div>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
+                        <i data-lucide="file-check-2" class="w-5 h-5 text-purple-400 shrink-0"></i>
+                        <div>
+                            <div class="font-bold text-slate-200">ज़िला मास्टर सारांश</div>
+                            <div class="text-[11px] text-slate-400">पूर्ण ज़िले की कुल योग रिपोर्ट</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- District Folder Selection & Scanner Card -->
+            <section class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-700">
+                            <i data-lucide="folder-input" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">1. ज़िले / मुख्य निर्वाचन फ़ोल्डर का चयन करें</h3>
+                            <p class="text-xs text-slate-500">फ़ोल्डर ब्राउज़ करें या नीचे अपना पाथ पेस्ट करें</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Path Input Row -->
+                <div class="space-y-3">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="folder" class="w-4 h-4"></i>
+                            </div>
+                            <input type="text" id="districtFolderPathInput" placeholder="उदा. D:\Bhilwara_District या C:\Users\karma\Desktop\District_Files" class="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 outline-none font-mono text-slate-800 transition">
+                        </div>
+                        <button type="button" id="districtBrowseBtn" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs shrink-0">
+                            <i data-lucide="folder-open" class="w-4 h-4 text-cyan-400"></i>
+                            <span>फ़ोल्डर चुनें (Browse)</span>
+                        </button>
+                        <button type="button" id="districtScanBtn" class="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-teal-700 hover:from-cyan-700 hover:to-teal-800 text-white rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-cyan-900/10 shrink-0">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                            <span>संरचना स्कैन करें (Scan)</span>
+                        </button>
+                    </div>
+
+                    <!-- Folder Structure Help Box -->
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
+                        <i data-lucide="info" class="w-4 h-4 text-cyan-600 mt-0.5 shrink-0"></i>
+                        <div class="space-y-1">
+                            <span class="font-bold text-slate-800">समर्थित फ़ोल्डर संरचना (Folder Structure):</span>
+                            <div class="font-mono text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200">
+                                📁 District_Root /<br>
+                                &nbsp;&nbsp;├── 📁 Panchayat_Samiti_1 /<br>
+                                &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── 📁 Panchayat_A / ➔ Ward_1.pdf, Ward_2.pdf... ➔ <span class="text-emerald-700 font-bold">Panchayat_A.xlsx</span><br>
+                                &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── 📁 Panchayat_B / ➔ Ward_1.pdf, Ward_2.pdf... ➔ <span class="text-emerald-700 font-bold">Panchayat_B.xlsx</span><br>
+                                &nbsp;&nbsp;└── 📁 Panchayat_Samiti_2 / ...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Discovered Statistics & Action Bar (Hidden until scanned) -->
+            <section id="districtScanResultsCard" class="hidden bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">2. स्कैन परिणाम एवं ऑटोमेशन नियंत्रण</h3>
+                            <p class="text-xs text-slate-500">ज़िले के सभी वार्ड पीडीएफ्स पाए गए</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6 Stats Tiles Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase">मुख्य ज़िला फ़ोल्डर</div>
+                        <div id="statDistrictName" class="text-sm font-extrabold text-slate-900 truncate mt-0.5">-</div>
+                    </div>
+                    <div class="p-3 bg-cyan-50/60 rounded-xl border border-cyan-200 text-center">
+                        <div class="text-[11px] font-bold text-cyan-800 uppercase">पंचायत समितियां</div>
+                        <div id="statTotalSamitis" class="text-lg font-black text-cyan-900 mt-0.5">0</div>
+                    </div>
+                    <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 text-center">
+                        <div class="text-[11px] font-bold text-indigo-800 uppercase">ग्राम पंचायतें</div>
+                        <div id="statTotalPanchayats" class="text-lg font-black text-indigo-900 mt-0.5">0</div>
+                    </div>
+                    <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200 text-center">
+                        <div class="text-[11px] font-bold text-emerald-800 uppercase">कुल वार्ड PDFs</div>
+                        <div id="statTotalPdfs" class="text-lg font-black text-emerald-900 mt-0.5">0</div>
+                    </div>
+                    <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-200 text-center">
+                        <div class="text-[11px] font-bold text-amber-800 uppercase">पूर्व निर्मित (Skip)</div>
+                        <div id="statAlreadyProcessed" class="text-lg font-black text-amber-900 mt-0.5">0</div>
+                    </div>
+                    <div class="p-3 bg-rose-50/60 rounded-xl border border-rose-200 text-center">
+                        <div class="text-[11px] font-bold text-rose-800 uppercase">शेष कार्य (Pending)</div>
+                        <div id="statPendingCount" class="text-lg font-black text-rose-900 mt-0.5">0</div>
+                    </div>
+                </div>
+
+                <!-- Execution Settings & Launch Button -->
+                <div class="p-4 bg-slate-900 rounded-xl text-white flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <label class="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-200">
+                            <input type="checkbox" id="districtSkipExistingCheck" checked class="w-4 h-4 rounded text-cyan-600 focus:ring-cyan-500 border-slate-700 bg-slate-800">
+                            <span>पूर्व से निर्मित पंचायतों को छोड़ें (Skip Already Processed)</span>
+                        </label>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-slate-400">एक्सेल थीम:</span>
+                            <select id="districtThemeSelect" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-medium outline-none">
+                                <option value="geam_digital">Geam Digital Pro (Navy)</option>
+                                <option value="navy">Corporate Navy</option>
+                                <option value="emerald">Emerald Finance</option>
+                                <option value="charcoal">Modern Slate</option>
+                                <option value="classic">Classic Office</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="button" id="districtStartBtn" class="px-6 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0">
+                        <i data-lucide="play" class="w-4 h-4 fill-slate-950"></i>
+                        <span>सम्पूर्ण ज़िला ऑटोमेशन प्रारंभ करें (Start Automation)</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Live Automation Execution Progress Card (Hidden until started) -->
+            <section id="districtProgressCard" class="hidden bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-700 animate-pulse">
+                            <i data-lucide="refresh-cw" class="w-4 h-4 animate-spin"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">3. ज़िला ऑटोमेशन लाइव प्रगति (Live Execution Progress)</h3>
+                            <p class="text-xs text-slate-500" id="districtLiveStatusText">ऑटोमेशन चल रहा है...</p>
+                        </div>
+                    </div>
+
+                    <div id="districtSummaryActionBox" class="hidden">
+                        <a id="districtDownloadSummaryLink" href="#" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-2 transition cursor-pointer">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>📊 ज़िला मास्टर सारांश रिपोर्ट डाउनलोड करें (.xlsx)</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Progress Bar & Details -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-500">वर्तमान पंचायत समिति:</span>
+                            <span id="districtCurrentSamitiBadge" class="bg-cyan-100 text-cyan-900 px-2 py-0.5 rounded-md font-extrabold">-</span>
+                            <span class="text-slate-400">➔</span>
+                            <span class="text-slate-500">ग्राम पंचायत:</span>
+                            <span id="districtCurrentPanchayatBadge" class="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-md font-extrabold">-</span>
+                        </div>
+                        <span id="districtProgressPercent" class="text-sm font-black text-cyan-700">0%</span>
+                    </div>
+
+                    <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                        <div id="districtProgressBar" class="bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+                    </div>
+
+                    <!-- Progress Micro Counters -->
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium pt-1">
+                        <div>पूर्ण पंचायतें: <strong id="districtCompletedCount" class="text-emerald-700 font-bold">0</strong> / <span id="districtTargetCount">0</span></div>
+                        <div>स्किप: <strong id="districtSkippedCount" class="text-amber-700 font-bold">0</strong></div>
+                        <div>कुल सक्रिय मतदाता: <strong id="districtTotalVotersCount" class="text-cyan-700 font-bold">0</strong></div>
+                    </div>
+                </div>
+
+                <!-- Live Terminal / Console Box -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                        <span>कार्यवाही लॉग (Execution Console Log):</span>
+                        <span class="text-[10px] text-slate-400">स्वतः स्क्रॉल सक्रिय</span>
+                    </div>
+                    <div id="districtLogConsole" class="bg-slate-950 font-mono text-[11px] text-slate-300 p-4 rounded-xl h-56 overflow-y-auto space-y-1 border border-slate-800 shadow-inner">
+                        <div class="text-slate-500">[System] ऑटोमेशन इंजन तैयार है। पाथ स्कैन करके प्रारंभ करें...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Discovered Hierarchy Tree / Accordion -->
+            <section id="districtTreeSection" class="hidden bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
+                            <i data-lucide="network" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">4. ज़िला संरचना सूची (Discovered Hierarchy)</h3>
+                            <p class="text-xs text-slate-500">पंचायत समितियों एवं उनके अंतर्गत पंचायतों का विवरण</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="districtTreeContainer" class="space-y-3">
+                    <!-- Populated dynamically -->
+                </div>
             </section>
 
         </div>

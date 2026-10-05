@@ -101,7 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'feature3', el: feature3Container, btn: tabFeature3Btn, activeClass: 'text-rose-800' },
             { id: 'feature4', el: feature4Container, btn: tabFeature4Btn, activeClass: 'text-amber-900' },
             { id: 'feature5', el: document.getElementById('feature5Container'), btn: tabFeature5Btn, activeClass: 'text-purple-900' },
-            { id: 'feature6', el: document.getElementById('feature6Container'), btn: tabFeature6Btn, activeClass: 'text-teal-900' }
+            { id: 'feature6', el: document.getElementById('feature6Container'), btn: tabFeature6Btn, activeClass: 'text-teal-900' },
+            { id: 'district', el: document.getElementById('districtContainer'), btn: document.getElementById('tabDistrictBtn'), activeClass: 'text-cyan-900' }
         ];
 
         containers.forEach(c => {
@@ -128,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (tabId === 'feature4') featureActiveDesc.textContent = 'A, B, C, D अनुसार वर्णमाला (Alphabetical) वोटर लिस्ट';
             else if (tabId === 'feature5') featureActiveDesc.textContent = 'समान मकान नंबर वार बड़े परिवारों की लिस्ट (अवरोही क्रम)';
             else if (tabId === 'feature6') featureActiveDesc.textContent = 'आयु अनुसार युवा (18-26 बढ़ते क्रम) एवं बुजुर्ग (120-70 घटते क्रम) लिस्ट';
+            else if (tabId === 'district') featureActiveDesc.textContent = 'सम्पूर्ण ज़िला: पंचायत समिति ➔ ग्राम पंचायत ➔ वार्ड्स एक्सेल ऑटोमेशन';
         }
 
         if (window.lucide) lucide.createIcons();
@@ -139,6 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabFeature4Btn) tabFeature4Btn.addEventListener('click', () => switchTab('feature4'));
     if (tabFeature5Btn) tabFeature5Btn.addEventListener('click', () => switchTab('feature5'));
     if (tabFeature6Btn) tabFeature6Btn.addEventListener('click', () => switchTab('feature6'));
+    const tabDistrictBtn = document.getElementById('tabDistrictBtn');
+    if (tabDistrictBtn) tabDistrictBtn.addEventListener('click', () => switchTab('district'));
 
     if (goToParchiHeroBtn) {
         goToParchiHeroBtn.addEventListener('click', () => {
@@ -4472,6 +4476,294 @@ document.addEventListener('DOMContentLoaded', () => {
             closeHistoryDrawer();
         }
     });
+
+    // ==============================================================================
+    // DISTRICT AUTOMATED BATCH PROCESSING ENGINE (सम्पूर्ण ज़िला ऑटोमेशन)
+    // ==============================================================================
+    function initDistrictAutomation() {
+        const folderInput = document.getElementById('districtFolderPathInput');
+        const browseBtn = document.getElementById('districtBrowseBtn');
+        const scanBtn = document.getElementById('districtScanBtn');
+        const resultsCard = document.getElementById('districtScanResultsCard');
+        
+        const statDistrictName = document.getElementById('statDistrictName');
+        const statTotalSamitis = document.getElementById('statTotalSamitis');
+        const statTotalPanchayats = document.getElementById('statTotalPanchayats');
+        const statTotalPdfs = document.getElementById('statTotalPdfs');
+        const statAlreadyProcessed = document.getElementById('statAlreadyProcessed');
+        const statPendingCount = document.getElementById('statPendingCount');
+        
+        const skipExistingCheck = document.getElementById('districtSkipExistingCheck');
+        const themeSelect = document.getElementById('districtThemeSelect');
+        const startBtn = document.getElementById('districtStartBtn');
+        
+        const progressCard = document.getElementById('districtProgressCard');
+        const liveStatusText = document.getElementById('districtLiveStatusText');
+        const summaryActionBox = document.getElementById('districtSummaryActionBox');
+        const downloadSummaryLink = document.getElementById('districtDownloadSummaryLink');
+        
+        const currentSamitiBadge = document.getElementById('districtCurrentSamitiBadge');
+        const currentPanchayatBadge = document.getElementById('districtCurrentPanchayatBadge');
+        const progressPercent = document.getElementById('districtProgressPercent');
+        const progressBar = document.getElementById('districtProgressBar');
+        
+        const completedCount = document.getElementById('districtCompletedCount');
+        const targetCount = document.getElementById('districtTargetCount');
+        const skippedCount = document.getElementById('districtSkippedCount');
+        const totalVotersCount = document.getElementById('districtTotalVotersCount');
+        const logConsole = document.getElementById('districtLogConsole');
+        
+        const treeSection = document.getElementById('districtTreeSection');
+        const treeContainer = document.getElementById('districtTreeContainer');
+        
+        let currentTaskId = null;
+        let pollTimer = null;
+        let lastScanData = null;
+
+        function logToConsole(msg, type = 'info') {
+            if (!logConsole) return;
+            const line = document.createElement('div');
+            const timeStr = new Date().toLocaleTimeString();
+            let colorClass = 'text-slate-300';
+            if (type === 'start_panchayat') colorClass = 'text-cyan-400 font-bold';
+            else if (type === 'complete_panchayat') colorClass = 'text-emerald-400 font-bold';
+            else if (type === 'skip_panchayat') colorClass = 'text-amber-400';
+            else if (type === 'error_panchayat') colorClass = 'text-rose-400 font-bold';
+            else if (type === 'finish') colorClass = 'text-emerald-300 font-black';
+            
+            line.className = `${colorClass} flex items-start gap-2`;
+            line.innerHTML = `<span class="text-slate-600 select-none">[${timeStr}]</span> <span>${msg}</span>`;
+            logConsole.appendChild(line);
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }
+
+        // 1. Browse Folder Button
+        if (browseBtn) {
+            browseBtn.addEventListener('click', async () => {
+                try {
+                    browseBtn.disabled = true;
+                    browseBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin text-cyan-400"></i> <span>खुल रहा है...</span>';
+                    if (window.lucide) lucide.createIcons();
+
+                    const res = await fetch('/api/district/browse', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success && data.folder) {
+                        folderInput.value = data.folder;
+                        doScan();
+                    }
+                } catch (e) {
+                    console.error('Browse folder error:', e);
+                } finally {
+                    browseBtn.disabled = false;
+                    browseBtn.innerHTML = '<i data-lucide="folder-open" class="w-4 h-4 text-cyan-400"></i> <span>फ़ोल्डर चुनें (Browse)</span>';
+                    if (window.lucide) lucide.createIcons();
+                }
+            });
+        }
+
+        // 2. Scan Hierarchy Button
+        async function doScan() {
+            const folderPath = folderInput.value.trim();
+            if (!folderPath) {
+                alert('कृपया पहले ज़िले का फ़ोल्डर पाथ दर्ज करें या Browse बटन दबाएँ।');
+                return;
+            }
+
+            try {
+                scanBtn.disabled = true;
+                scanBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>स्कैन हो रहा है...</span>';
+                if (window.lucide) lucide.createIcons();
+
+                const res = await fetch('/api/district/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder_path: folderPath })
+                });
+
+                const json = await res.json();
+                if (!json.success) {
+                    alert('त्रुटि: ' + (json.error || 'फ़ोल्डर स्कैन नहीं हो सका'));
+                    return;
+                }
+
+                lastScanData = json.data;
+                renderScanResults(lastScanData);
+
+            } catch (err) {
+                alert('सर्वर से कनेक्ट करने में त्रुटि: ' + err.message);
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.innerHTML = '<i data-lucide="search" class="w-4 h-4"></i> <span>संरचना स्कैन करें (Scan)</span>';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        if (scanBtn) {
+            scanBtn.addEventListener('click', doScan);
+        }
+
+        function renderScanResults(d) {
+            statDistrictName.textContent = d.district_name || 'District';
+            statTotalSamitis.textContent = d.total_samitis.toLocaleString();
+            statTotalPanchayats.textContent = d.total_panchayats.toLocaleString();
+            statTotalPdfs.textContent = d.total_pdfs.toLocaleString();
+            statAlreadyProcessed.textContent = d.already_processed_count.toLocaleString();
+            statPendingCount.textContent = d.pending_count.toLocaleString();
+
+            resultsCard.classList.remove('hidden');
+
+            // Render tree
+            treeContainer.innerHTML = '';
+            for (const [samiti, pList] of Object.entries(d.samitis)) {
+                const samitiCard = document.createElement('div');
+                samitiCard.className = 'border border-slate-200 rounded-xl overflow-hidden bg-slate-50';
+                
+                const readyCount = pList.filter(p => !p.has_excel).length;
+                const doneCount = pList.filter(p => p.has_excel).length;
+
+                samitiCard.innerHTML = `
+                    <div class="p-3.5 bg-slate-100 flex items-center justify-between font-bold text-xs text-slate-800 border-b border-slate-200">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="folder" class="w-4 h-4 text-cyan-600"></i>
+                            <span>पंचायत समिति: ${samiti}</span>
+                            <span class="bg-cyan-100 text-cyan-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${pList.length} पंचायतें</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[11px]">
+                            ${doneCount > 0 ? `<span class="text-emerald-700">✓ ${doneCount} निर्मित</span>` : ''}
+                            ${readyCount > 0 ? `<span class="text-amber-700">⏳ ${readyCount} शेष</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 bg-white">
+                        ${pList.map(p => `
+                            <div class="p-2 rounded-lg border ${p.has_excel ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-slate-50/50'} flex items-center justify-between text-xs">
+                                <div>
+                                    <div class="font-bold text-slate-800">${p.panchayat_name}</div>
+                                    <div class="text-[11px] text-slate-500">${p.pdf_count} वार्ड PDFs</div>
+                                </div>
+                                <div>
+                                    ${p.has_excel ? 
+                                        `<span class="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">✓ Excel निर्मित</span>` : 
+                                        `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">तैयार</span>`
+                                    }
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                treeContainer.appendChild(samitiCard);
+            }
+
+            treeSection.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // 3. Start Automation Button
+        if (startBtn) {
+            startBtn.addEventListener('click', async () => {
+                const folderPath = folderInput.value.trim();
+                if (!folderPath) {
+                    alert('कृपया पहले फ़ोल्डर पाथ दर्ज करें।');
+                    return;
+                }
+
+                const skipExisting = skipExistingCheck ? skipExistingCheck.checked : true;
+                const theme = themeSelect ? themeSelect.value : 'geam_digital';
+
+                if (!confirm(`क्या आप ${statTotalPanchayats.textContent} पंचायतों का सम्पूर्ण ज़िला ऑटो-बैच प्रारंभ करना चाहते हैं?`)) {
+                    return;
+                }
+
+                try {
+                    startBtn.disabled = true;
+                    startBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>ऑटोमेशन चल रहा है...</span>';
+                    progressCard.classList.remove('hidden');
+                    summaryActionBox.classList.add('hidden');
+                    logConsole.innerHTML = '';
+                    logToConsole('🚀 ज़िला ऑटोमेशन कार्य प्रारंभ किया गया...', 'start_panchayat');
+
+                    const res = await fetch('/api/district/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            folder_path: folderPath,
+                            skip_existing: skipExisting,
+                            theme: theme
+                        })
+                    });
+
+                    const json = await res.json();
+                    if (!json.success) {
+                        alert('प्रारंभ करने में त्रुटि: ' + (json.error || 'Unknown error'));
+                        startBtn.disabled = false;
+                        startBtn.innerHTML = '<i data-lucide="play" class="w-4 h-4 fill-slate-950"></i> <span>सम्पूर्ण ज़िला ऑटोमेशन प्रारंभ करें</span>';
+                        return;
+                    }
+
+                    currentTaskId = json.task_id;
+                    targetCount.textContent = statTotalPanchayats.textContent;
+
+                    // Start polling
+                    if (pollTimer) clearInterval(pollTimer);
+                    pollTimer = setInterval(pollDistrictProgress, 1200);
+
+                } catch (e) {
+                    alert('अनपेक्षित त्रुटि: ' + e.message);
+                    startBtn.disabled = false;
+                    startBtn.innerHTML = '<i data-lucide="play" class="w-4 h-4 fill-slate-950"></i> <span>सम्पूर्ण ज़िला ऑटोमेशन प्रारंभ करें</span>';
+                }
+            });
+        }
+
+        let seenLogCount = 0;
+        async function pollDistrictProgress() {
+            if (!currentTaskId) return;
+            try {
+                const res = await fetch(`/api/district/status/${currentTaskId}`);
+                const json = await res.json();
+                if (!json.success) return;
+
+                const t = json.task;
+                progressPercent.textContent = `${t.percent}%`;
+                progressBar.style.width = `${t.percent}%`;
+                currentSamitiBadge.textContent = t.current_samiti || '-';
+                currentPanchayatBadge.textContent = t.current_panchayat || '-';
+                completedCount.textContent = t.completed_panchayats || 0;
+                skippedCount.textContent = t.skipped_panchayats || 0;
+                totalVotersCount.textContent = (t.total_voters || 0).toLocaleString();
+
+                // Append new logs
+                if (t.logs && t.logs.length > seenLogCount) {
+                    const newLogs = t.logs.slice(seenLogCount);
+                    newLogs.forEach(l => logToConsole(l.message, l.type));
+                    seenLogCount = t.logs.length;
+                }
+
+                if (t.status === 'completed') {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                    liveStatusText.textContent = '🎉 सम्पूर्ण ज़िला ऑटोमेशन सफलतापूर्वक संपन्न!';
+                    startBtn.disabled = false;
+                    startBtn.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-300"></i> <span>ऑटोमेशन पूर्ण (पुनः प्रारंभ करें)</span>';
+                    summaryActionBox.classList.remove('hidden');
+                    downloadSummaryLink.href = `/api/district/download_summary/${currentTaskId}`;
+                    logToConsole('🎉 ज़िला मास्टर सारांश रिपोर्ट तैयार है। आप ऊपर दिए बटन से डाउनलोड कर सकते हैं।', 'finish');
+                    if (window.lucide) lucide.createIcons();
+                } else if (t.status === 'error') {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                    liveStatusText.textContent = '❌ त्रुटि: ' + t.error;
+                    startBtn.disabled = false;
+                    startBtn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i> <span>पुनः प्रयास करें</span>';
+                    logToConsole('❌ त्रुटि: ' + t.error, 'error_panchayat');
+                }
+            } catch (err) {
+                console.error('District polling error:', err);
+            }
+        }
+    }
+
+    // Initialize District Automation
+    initDistrictAutomation();
 
     // Initial load of history pills
     refreshHistoryPills();

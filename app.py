@@ -56,6 +56,10 @@ from pdf_engine.age_voter_list import (
     generate_age_pdf,
     generate_age_excel
 )
+from pdf_engine.district_automator import (
+    scan_district_hierarchy,
+    run_district_automation
+)
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max upload for batch voter lists
@@ -80,6 +84,21 @@ ALPHA_CACHE = {}
 FAMILY_CACHE = {}
 AGE_CACHE = {}
 UPLOAD_TASKS = {}
+DISTRICT_TASKS = {}
+
+def choose_folder_gui() -> str:
+    """Tries to show a native Windows Browse Folder dialog."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        folder = filedialog.askdirectory(title="ज़िले का मुख्य फ़ोल्डर चुनें (Select District Folder)")
+        root.destroy()
+        return folder.strip() if folder else ""
+    except Exception:
+        return ""
 
 def process_batch_wards(pdf_paths: list, progress_callback: Optional[Any] = None) -> dict:
     """Processes multiple or single voter list PDFs into a structured multi-sheet dataset."""
@@ -2760,6 +2779,134 @@ def age_print_standalone():
         return html_with_print
     except Exception as e:
         return f"<h3>त्रुटि: {str(e)}</h3>", 500
+
+# ==============================================================================
+# DISTRICT AUTOMATION API ENDPOINTS (सम्पूर्ण ज़िला एक्सेल ऑटोमेशन)
+# ==============================================================================
+
+@app.route('/api/district/browse', methods=['POST', 'GET'])
+def api_district_browse():
+    """Opens native Windows folder browse dialog and returns selected path."""
+    try:
+        folder = choose_folder_gui()
+        return jsonify({'success': True, 'folder': folder})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/district/scan', methods=['POST'])
+def api_district_scan():
+    """Scans the specified district directory and returns discovered hierarchy."""
+    try:
+        data = request.get_json() or {}
+        folder_path = data.get('folder_path', '').strip('\"\' ')
+        if not folder_path or not os.path.exists(folder_path):
+            return jsonify({'success': False, 'error': 'अमान्य फ़ोल्डर पाथ या फ़ोल्डर मौजूद नहीं है'}), 400
+        scan_info = scan_district_hierarchy(folder_path)
+        return jsonify({'success': True, 'data': scan_info})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/district/start', methods=['POST'])
+def api_district_start():
+    """Launches the district-wide automation in a background worker thread."""
+    try:
+        data = request.get_json() or {}
+        folder_path = data.get('folder_path', '').strip('\"\' ')
+        skip_existing = data.get('skip_existing', True)
+        theme = data.get('theme', 'geam_digital')
+        
+        if not folder_path or not os.path.exists(folder_path):
+            return jsonify({'success': False, 'error': 'फ़ोल्डर पाथ अमान्य है'}), 400
+            
+        task_id = str(uuid.uuid4())[:8]
+        DISTRICT_TASKS[task_id] = {
+            'task_id': task_id,
+            'folder_path': folder_path,
+            'status': 'starting',
+            'percent': 0,
+            'current_samiti': '',
+            'current_panchayat': '',
+            'total_panchayats': 0,
+            'completed_panchayats': 0,
+            'skipped_panchayats': 0,
+            'failed_panchayats': 0,
+            'total_voters': 0,
+            'logs': [],
+            'summary_file': '',
+            'result': None,
+            'error': None
+        }
+        
+        def _worker():
+            from datetime import datetime
+            def _on_progress(event):
+                if task_id not in DISTRICT_TASKS:
+                    return
+                t = DISTRICT_TASKS[task_id]
+                t['percent'] = event.get('percent', t['percent'])
+                t['total_panchayats'] = event.get('total_panchayats', t['total_panchayats'])
+                t['completed_panchayats'] = event.get('completed_panchayats', t['completed_panchayats'])
+                t['skipped_panchayats'] = event.get('skipped_panchayats', t['skipped_panchayats'])
+                t['failed_panchayats'] = event.get('failed_panchayats', t['failed_panchayats'])
+                if event.get('samiti'):
+                    t['current_samiti'] = event.get('samiti')
+                if event.get('panchayat'):
+                    t['current_panchayat'] = event.get('panchayat')
+                msg = event.get('message', '')
+                if msg:
+                    t['logs'].append({
+                        'time': datetime.now().strftime('%H:%M:%S'),
+                        'type': event.get('type', 'info'),
+                        'message': msg
+                    })
+                    if len(t['logs']) > 500:
+                        t['logs'] = t['logs'][-500:]
+                        
+            try:
+                DISTRICT_TASKS[task_id]['status'] = 'running'
+                res = run_district_automation(
+                    root_dir=folder_path,
+                    skip_existing=skip_existing,
+                    theme=theme,
+                    progress_callback=_on_progress
+                )
+                DISTRICT_TASKS[task_id]['status'] = 'completed'
+                DISTRICT_TASKS[task_id]['percent'] = 100
+                DISTRICT_TASKS[task_id]['result'] = res
+                DISTRICT_TASKS[task_id]['total_voters'] = res.get('total_voters', 0)
+                DISTRICT_TASKS[task_id]['summary_file'] = res.get('summary_file', '')
+            except Exception as e:
+                DISTRICT_TASKS[task_id]['status'] = 'error'
+                DISTRICT_TASKS[task_id]['error'] = str(e)
+                
+        threading.Thread(target=_worker, daemon=True).start()
+        return jsonify({'success': True, 'task_id': task_id})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/district/status/<task_id>', methods=['GET'])
+def api_district_status(task_id):
+    """Returns current live progress and logs for a district automation task."""
+    task = DISTRICT_TASKS.get(task_id)
+    if not task:
+        return jsonify({'success': False, 'error': 'टास्क नहीं मिला'}), 404
+    return jsonify({'success': True, 'task': task})
+
+@app.route('/api/district/download_summary/<task_id>', methods=['GET'])
+def api_district_download_summary(task_id):
+    """Downloads the generated Master District Summary Excel file."""
+    task = DISTRICT_TASKS.get(task_id)
+    if not task or not task.get('summary_file'):
+        return jsonify({'error': 'सारांश फ़ाइल उपलब्ध नहीं है'}), 404
+    summary_file = task['summary_file']
+    if not os.path.exists(summary_file):
+        return jsonify({'error': 'फ़ाइल सर्वर पर नहीं मिली'}), 404
+    return send_file(
+        summary_file,
+        as_attachment=True,
+        download_name=os.path.basename(summary_file),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
