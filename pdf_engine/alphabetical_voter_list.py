@@ -119,9 +119,13 @@ def normalize_gender(val: Any) -> str:
     s = str(val or '').strip().lower()
     if not s:
         return 'पुरूष'
-    if any(m in s for m in ['m', 'male', 'purush', 'पु', 'पुरूष', 'पचरष']):
+    if s in ['f', 'female', 'woman', 'f.'] or any(k in s for k in ['स्त्री', 'महिला', 'female', 'stree', 'mahila', 'सल']):
+        return 'स्त्री'
+    if s in ['m', 'male', 'man', 'm.'] or any(k in s for k in ['पुरूष', 'पुरुष', 'male', 'purush', 'पचरष', 'पु.']):
         return 'पुरूष'
-    if any(f in s for f in ['f', 'female', 'mahila', 'stree', 'स्त्री', 'महिला', 'म.', 'सल']):
+    if s == 'पु':
+        return 'पुरूष'
+    if s == 'म':
         return 'स्त्री'
     return 'पुरूष'
 

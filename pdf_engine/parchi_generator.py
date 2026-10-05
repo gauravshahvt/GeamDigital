@@ -141,6 +141,8 @@ def parse_excel_for_parchi(file_path_or_bytes: Any, sheet_name: Optional[str] = 
     """
     if isinstance(file_path_or_bytes, (str, os.PathLike)):
         wb = openpyxl.load_workbook(file_path_or_bytes, data_only=True)
+    elif isinstance(file_path_or_bytes, BytesIO):
+        wb = openpyxl.load_workbook(file_path_or_bytes, data_only=True)
     else:
         wb = openpyxl.load_workbook(BytesIO(file_path_or_bytes), data_only=True)
 
@@ -228,7 +230,7 @@ def parse_excel_for_parchi(file_path_or_bytes: Any, sheet_name: Optional[str] = 
             return 'relative_name'
         if any(k in t_clean for k in ['आयु', 'उम्र', 'age', 'voterage']):
             return 'age'
-        if any(k in t_clean for k in ['लिंग', 'जेंडर', 'gender', 'sex']):
+        if any(k in t_clean for k in ['लिंग', 'जेंडर', 'gender', 'sex', 'ललग', 'स्त्रीपुरुष', 'पुस्त्री', 'पुरूषस्त्री', 'स्त्रीपुरूष']):
             return 'gender'
         if any(k in t_clean for k in ['वोटरid', 'वोटरआईडी', 'epic', 'epicno', 'voterid', 'पहचानपत्रक्रमांक', 'पहचानपत्रसं', 'पहचानपत्र']):
             return 'epic'
@@ -286,6 +288,17 @@ def parse_excel_for_parchi(file_path_or_bytes: Any, sheet_name: Optional[str] = 
                 if 3 not in col_indices.values():
                     col_indices['part_no'] = 3
 
+        if 'gender' not in col_indices and ws.max_column >= 8:
+            c8_val = clean_val_str(ws.cell(row=header_row_idx, column=8).value).lower()
+            c8_clean = re.sub(r'[\s\.\/०\-_:;|()\[\]]+', '', c8_val)
+            if any(k in c8_clean for k in ['लिंग', 'जेंडर', 'gender', 'sex', 'ललग', 'स्त्री', 'पुरुष', 'पुरूष', 'पु']):
+                if 8 not in col_indices.values():
+                    col_indices['gender'] = 8
+            elif ws.max_column >= 13:
+                # In standard 13/14-column format, column 8 is always gender
+                if 8 not in col_indices.values():
+                    col_indices['gender'] = 8
+
         for r in range(header_row_idx + 1, ws.max_row + 1):
             row_cells = [ws.cell(row=r, column=c).value for c in range(1, ws.max_column + 1)]
             if not any(row_cells):
@@ -320,13 +333,17 @@ def parse_excel_for_parchi(file_path_or_bytes: Any, sheet_name: Optional[str] = 
             except (ValueError, TypeError):
                 age_val = raw_age
 
-            gender = get_field('gender')
-            if not gender:
+            raw_gender = get_field('gender')
+            if raw_gender and str(raw_gender).strip():
+                rg = str(raw_gender).strip().lower()
+                if any(k in rg for k in ['f', 'female', 'mahila', 'stree', 'स्त्री', 'महिला', 'सल', 'म.', 'म']):
+                    gender = 'स्त्री'
+                elif any(k in rg for k in ['m', 'male', 'purush', 'पुरूष', 'पुरुष', 'पचरष', 'पु.', 'पु']):
+                    gender = 'पुरूष'
+                else:
+                    gender = str(raw_gender).strip()
+            else:
                 gender = predict_gender(name, relative_name)
-            elif gender.lower() in ['m', 'male', 'purush', 'पचरष']:
-                gender = 'पुरूष'
-            elif gender.lower() in ['f', 'female', 'mahila', 'stree', 'सल']:
-                gender = 'स्त्री'
 
             house = get_field('house')
             booth = get_field('booth_address')
