@@ -839,11 +839,17 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
 
             # Gender extraction
             gender = ""
-            if re.search(r'(?:पचरष|पुरूष|Male|\bM\b)', card_text, re.IGNORECASE):
-                gender = "पुरूष"
-            elif re.search(r'(?:सल|स्त्री|महिला|मनहलर|Female|\bF\b)', card_text, re.IGNORECASE):
+            if re.search(r'(?:सल|स्त्री|महिला|मनहलर|Female|\bF\b)', card_text, re.IGNORECASE):
                 gender = "स्त्री"
-            elif "पति" in relative_name or any(w in voter_name for w in ['देवी', 'बाई', 'कुमारी', 'कंवर', 'बेगम']):
+            elif re.search(r'(?:पचरष|पुरूष|पुरुष|Male|\bM\b)', card_text, re.IGNORECASE):
+                gender = "पुरूष"
+            elif "पति" in relative_name or any(w in voter_name for w in [
+                'देवी', 'बाई', 'कुमारी', 'कंवर', 'बेगम', 'कौर', 'सुगना', 'शांति', 'मंजू', 'मन्जू', 
+                'रेखा', 'कमला', 'सीता', 'गीता', 'पुष्पा', 'सुशीला', 'अनीता', 'सुनीता', 'संगीता', 
+                'माया', 'लीला', 'पूजा', 'आरती', 'राधा', 'ममता', 'शारदा', 'किरण', 'मोनिका', 
+                'प्रियंका', 'नेनी', 'भागुती', 'मनभरी', 'काली', 'संतोष', 'ललिता', 'पिंकी', 'कौशल्या',
+                'उर्मिला', 'मिस', 'विमला', 'भावना', 'आशा', 'कृष्णा', 'लक्ष्मी', 'पार्वती'
+            ]):
                 gender = "स्त्री"
             else:
                 gender = "पुरूष"
@@ -923,7 +929,7 @@ def process_multiple_wards(pdf_paths: List[str], progress_callback: Optional[Any
        - Sheet 2: 'समस्त_मतदाता_सूची' (Master 11-column list in sequence: Ward 1, then Ward 2... with Status Active/Deleted)
        - Sheets 3..N: 'वार्ड_1', 'वार्ड_2'... (Individual ward sheets)
     """
-    columns_13 = [
+    columns_14 = [
         'जि. प.',
         'पं. स.',
         'वार्ड नं.',
@@ -931,6 +937,7 @@ def process_multiple_wards(pdf_paths: List[str], progress_callback: Optional[Any
         'नाम',
         'पिता/पति का नाम',
         'आयु',
+        'लिंग',
         'मोबाइल नो',
         'वोटर ID',
         'हाउस नंबर',
@@ -938,6 +945,7 @@ def process_multiple_wards(pdf_paths: List[str], progress_callback: Optional[Any
         'बूथ का पता',
         'Status'
     ]
+    columns_13 = columns_14
 
     ward_results = []
     for ward_idx, path in enumerate(pdf_paths):
@@ -1108,6 +1116,7 @@ def export_voters_to_excel(voters: List[Dict[str, Any]], output_path: str, theme
         'नाम',
         'पिता/पति का नाम',
         'आयु',
+        'लिंग',
         'मोबाइल नो',
         'वोटर ID',
         'हाउस नंबर',

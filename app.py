@@ -657,10 +657,11 @@ def api_parchi_from_session():
                     )
                     rel = row[col_idx.get('पिता/पति का नाम', 3)] if 'पिता/पति का नाम' in col_idx else ''
                     age = row[col_idx.get('आयु', 4)] if 'आयु' in col_idx else ''
-                    epic = row[col_idx.get('वोटर ID', 6)] if 'वोटर ID' in col_idx else ''
-                    house = row[col_idx.get('हाउस नंबर', 7)] if 'हाउस नंबर' in col_idx else '00'
-                    booth = row[col_idx.get('बूथ का पता', 9)] if 'बूथ का पता' in col_idx else ''
-                    status = row[col_idx.get('Status', 10)] if 'Status' in col_idx else 'Active'
+                    gender = row[col_idx['लिंग']] if 'लिंग' in col_idx and row[col_idx['लिंग']] else predict_gender(name, rel)
+                    epic = row[col_idx.get('वोटर ID', 7)] if 'वोटर ID' in col_idx else ''
+                    house = row[col_idx.get('हाउस नंबर', 8)] if 'हाउस नंबर' in col_idx else '00'
+                    booth = row[col_idx.get('बूथ का पता', 10)] if 'बूथ का पता' in col_idx else ''
+                    status = row[col_idx.get('Status', 11)] if 'Status' in col_idx else 'Active'
                     
                     voters.append({
                         'serial': serial,
@@ -670,7 +671,7 @@ def api_parchi_from_session():
                         'name': name,
                         'relative_name': rel,
                         'age': age,
-                        'gender': predict_gender(name, rel),
+                        'gender': gender,
                         'epic': epic,
                         'house': house if house else '00',
                         'booth_address': booth,
@@ -1057,10 +1058,11 @@ def api_color_parchi_from_session():
                     )
                     rel = row[col_idx.get('पिता/पति का नाम', 3)] if 'पिता/पति का नाम' in col_idx else ''
                     age = row[col_idx.get('आयु', 4)] if 'आयु' in col_idx else ''
-                    epic = row[col_idx.get('वोटर ID', 6)] if 'वोटर ID' in col_idx else ''
-                    house = row[col_idx.get('हाउस नंबर', 7)] if 'हाउस नंबर' in col_idx else '1'
-                    booth = row[col_idx.get('बूथ का पता', 9)] if 'बूथ का पता' in col_idx else ''
-                    status = row[col_idx.get('Status', 10)] if 'Status' in col_idx else 'Active'
+                    gender = row[col_idx['लिंग']] if 'लिंग' in col_idx and row[col_idx['लिंग']] else predict_gender(name, rel)
+                    epic = row[col_idx.get('वोटर ID', 7)] if 'वोटर ID' in col_idx else ''
+                    house = row[col_idx.get('हाउस नंबर', 8)] if 'हाउस नंबर' in col_idx else '1'
+                    booth = row[col_idx.get('बूथ का पता', 10)] if 'बूथ का पता' in col_idx else ''
+                    status = row[col_idx.get('Status', 11)] if 'Status' in col_idx else 'Active'
                     
                     voters.append({
                         'serial': serial,
@@ -1071,7 +1073,7 @@ def api_color_parchi_from_session():
                         'name': name,
                         'relative_name': rel,
                         'age': age,
-                        'gender': predict_gender(name, rel),
+                        'gender': gender,
                         'epic': epic,
                         'house': house if house else '1',
                         'booth_address': booth,
@@ -1365,10 +1367,11 @@ def api_alpha_from_session():
                     )
                     rel = row[col_idx.get('पिता/पति का नाम', 3)] if 'पिता/पति का नाम' in col_idx else ''
                     age = row[col_idx.get('आयु', 4)] if 'आयु' in col_idx else ''
-                    epic = row[col_idx.get('वोटर ID', 6)] if 'वोटर ID' in col_idx else ''
-                    house = row[col_idx.get('हाउस नंबर', 7)] if 'हाउस नंबर' in col_idx else ''
-                    booth = row[col_idx.get('बूथ का पता', 9)] if 'बूथ का पता' in col_idx else ''
-                    status = row[col_idx.get('Status', 10)] if 'Status' in col_idx else 'Active'
+                    gender = row[col_idx['लिंग']] if 'लिंग' in col_idx and row[col_idx['लिंग']] else predict_gender(name, rel)
+                    epic = row[col_idx.get('वोटर ID', 7)] if 'वोटर ID' in col_idx else ''
+                    house = row[col_idx.get('हाउस नंबर', 8)] if 'हाउस नंबर' in col_idx else ''
+                    booth = row[col_idx.get('बूथ का पता', 10)] if 'बूथ का पता' in col_idx else ''
+                    status = row[col_idx.get('Status', 11)] if 'Status' in col_idx else 'Active'
                     
                     voters.append({
                         'serial': serial,
@@ -1379,7 +1382,7 @@ def api_alpha_from_session():
                         'name': name,
                         'relative_name': rel,
                         'age': age,
-                        'gender': predict_gender(name, rel),
+                        'gender': gender,
                         'epic': epic,
                         'house': house,
                         'booth_address': booth,
@@ -1837,7 +1840,7 @@ def api_family_from_session():
                         'name': gv('name'),
                         'relative_name': gv('relative_name'),
                         'age': gv('age'),
-                        'gender': gv('gender'),
+                        'gender': gv('gender') or predict_gender(gv('name'), gv('relative_name')),
                         'epic': gv('epic'),
                         'house': gv('house'),
                         'booth_address': gv('booth_address') or w.get('polling_station', ''),
@@ -2325,7 +2328,7 @@ def api_age_from_session():
                         'name': gv('name'),
                         'relative_name': gv('relative_name'),
                         'age': gv('age'),
-                        'gender': gv('gender'),
+                        'gender': gv('gender') or predict_gender(gv('name'), gv('relative_name')),
                         'epic': gv('epic'),
                         'house': gv('house'),
                         'booth_address': gv('booth_address') or w.get('polling_station', ''),
