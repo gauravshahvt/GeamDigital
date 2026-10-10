@@ -7,7 +7,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-from pdf_engine.voter_extractor import process_multiple_wards
+from pdf_engine.voter_extractor import process_multiple_wards, extract_ward_from_filename
 from pdf_engine.excel_builder import create_excel_workbook
 
 def scan_district_hierarchy(root_dir: str) -> Dict[str, Any]:
@@ -29,16 +29,28 @@ def scan_district_hierarchy(root_dir: str) -> Dict[str, Any]:
 
     panchayats_found = []
     
+    # Sort key for ward PDFs
+    def _pdf_sort_key(fname: str):
+        fn_w = extract_ward_from_filename(fname)
+        if fn_w is not None and fn_w > 0:
+            return (0, fn_w)
+        return (1, [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', fname)])
+
     # Walk the directory tree to find folders containing PDF files
     for dirpath, dirnames, filenames in os.walk(root_dir):
-        # Filter for PDF files
+        # Filter for PDF files and sort in natural ward order
         pdf_files = [f for f in filenames if f.lower().endswith('.pdf') and not f.startswith('~$') and not f.startswith('.')]
         if not pdf_files:
             continue
+        pdf_files = sorted(pdf_files, key=_pdf_sort_key)
             
-        # Check for existing Excel file in this folder
+        # Check for existing Excel file in this folder (ignoring previous corrupted run names like Ward 0 to or to 44)
         excel_files = [f for f in filenames if f.lower().endswith('.xlsx') and not f.startswith('~$') and not f.startswith('.')]
-        existing_excel = excel_files[0] if excel_files else None
+        valid_excel_files = [
+            f for f in excel_files 
+            if not re.search(r'Ward\s*(?:0\s*to|[0-9]+\s*to\s*(?:44|47|99))', f, re.I)
+        ]
+        existing_excel = valid_excel_files[0] if valid_excel_files else None
         
         # Calculate relative path to deduce Samiti and Panchayat names
         rel_path = os.path.relpath(dirpath, root_dir)
@@ -366,6 +378,15 @@ def run_district_automation(
             out_path = os.path.join(folder, out_filename)
             with open(out_path, 'wb') as f:
                 f.write(excel_bytes)
+
+            # Clean up old glitched Excel files in this folder (e.g. 'Ward 0 to 44.xlsx')
+            for old_f in os.listdir(folder):
+                if old_f.lower().endswith('.xlsx') and old_f != out_filename and not old_f.startswith('~$'):
+                    if re.search(r'Ward\s*(?:0\s*to|[0-9]+\s*to\s*(?:44|47|99))', old_f, re.I):
+                        try:
+                            os.remove(os.path.join(folder, old_f))
+                        except Exception:
+                            pass
                 
             completed_panchayats += 1
             total_voters += res.get('total_active_voters', 0)

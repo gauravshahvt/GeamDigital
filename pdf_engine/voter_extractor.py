@@ -420,9 +420,65 @@ def is_voter_list_pdf(pdf_path: str) -> bool:
     except Exception:
         return False
 
-def extract_voter_list_metadata(doc: pymupdf.Document) -> Dict[str, str]:
+def _to_ascii_digits(val: str) -> str:
+    dev_digits = "०१२३४५६७८९"
+    res = ""
+    for ch in str(val or ''):
+        if ch in dev_digits:
+            res += str(dev_digits.index(ch))
+        elif ch.isdigit():
+            res += ch
+    return res.strip()
+
+def extract_ward_from_filename(filename: str) -> Optional[int]:
     """
-    Extracts Part Number (भाग संख्या), Polling Booth Address (बूथ का पता),
+    Extracts explicit ward / part number from filename if present.
+    Supports patterns:
+    - 'JAJOTA-Ward No-010.pdf' -> 10
+    - 'HARMADA-Ward_No-001.pdf' -> 1
+    - 'Ward 10.pdf', 'Ward_10.pdf', 'Ward-10.pdf' -> 10
+    - 'वार्ड 10.pdf', 'वार्ड-10.pdf', 'भाग 10.pdf' -> 10
+    - '010.pdf', '001.pdf' -> 10, 1
+    """
+    if not filename:
+        return None
+    clean = os.path.basename(str(filename))
+    clean = re.sub(r'^[a-f0-9\-]{36}_', '', clean)
+    clean = re.sub(r'\.xlsx?$|\.pdf$', '', clean, flags=re.I).strip()
+
+    # Ignore files that represent ward ranges like "Ward 1 to 10"
+    if re.search(r'\bto\b|\bसे\b|\bse\b', clean, re.I):
+        return None
+
+    # 1. Explicit Ward / भाग labels:
+    m = re.search(r'(?:Ward[_\s\-]*No[_\s\-]*|Ward[_\s\-]*|वार्ड[_\s\-]*|भाग[_\s\-]*)\s*([0-9]+)', clean, re.I)
+    if m:
+        try:
+            return int(m.group(1))
+        except ValueError:
+            pass
+
+    # 2. Number at end of filename after separator: e.g. "JAJOTA-010", "Harmada_11", "W10"
+    m = re.search(r'(?:[\-_]|\bW|\bWard)([0-9]+)$', clean, re.I)
+    if m:
+        try:
+            return int(m.group(1))
+        except ValueError:
+            pass
+
+    # 3. Filename is just numbers: e.g. "010", "001", "10"
+    m = re.match(r'^0*([0-9]+)$', clean)
+    if m:
+        try:
+            return int(m.group(1))
+        except ValueError:
+            pass
+
+    return None
+
+def extract_voter_list_metadata(doc: pymupdf.Document, pdf_path: Optional[str] = None) -> Dict[str, str]:
+    """
+    Extracts Part Number (भाग संख्या / वार्ड नं.), Polling Booth Address (बूथ का पता),
     and Area Address (एड्रेस) from cover and section pages.
     """
     part_no = "1"
@@ -431,37 +487,68 @@ def extract_voter_list_metadata(doc: pymupdf.Document) -> Dict[str, str]:
     booth_address = ""
     area_address = ""
 
-    # Page 1 OCR & Text
+    if not pdf_path:
+        pdf_path = getattr(doc, 'name', '')
+
+    # 1. Authoritative filename ward check
+    fn_ward = extract_ward_from_filename(pdf_path)
+
+    # 2. Digital Text ward check across Pages 1-3
+    text_ward = None
+    ward_regex = r'(?:वार्ड|रर[डर]र?|भाग)\s*(?:क्रमांक|कमरपक|संख्या|सपखजर|सं\.?|नं\.?|नंबर)?\s*[:\-\s=]*([0-9०-९]+)'
+
+    for p_idx in range(min(3, len(doc))):
+        p_txt = doc[p_idx].get_text()
+        ward_m = re.search(ward_regex, p_txt, re.I)
+        if ward_m:
+            try:
+                candidate = int(_to_ascii_digits(ward_m.group(1)))
+                if candidate > 0:
+                    text_ward = candidate
+                    break
+            except (ValueError, TypeError):
+                pass
+
+    # 3. OCR Fallback if text_ward is not found or is 0
+    ocr_ward = None
     p1 = doc[0]
     p1_text = p1.get_text()
+    p1_ocr = ""
 
-    # Part No / Ward No
-    ward_m = re.search(r'(?:वार्ड\s*क्रमांक|ररडर\s*कमरपक|भाग\s*संख्या)\s*[:\-\s]*([0-9]+)', p1_text)
-    if ward_m:
-        part_no = ward_m.group(1).strip()
-    elif is_tesseract_available():
-        # OCR Fallback
+    if (text_ward is None or text_ward == 0) and is_tesseract_available():
         try:
-            pix = p1.get_pixmap(dpi=150)
+            pix = p1.get_pixmap(dpi=200)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             p1_ocr = pytesseract.image_to_string(img, lang="hin+eng")
-            ocr_m = re.search(r'(?:वार्ड\s*क्रमांक|भाग\s*संख्या)\s*[:\-\s]*([0-9]+)', p1_ocr)
+            ocr_m = re.search(ward_regex, p1_ocr, re.I)
             if ocr_m:
-                part_no = ocr_m.group(1).strip()
+                raw_ocr = int(_to_ascii_digits(ocr_m.group(1)))
+                # De-noise common OCR artifacts:
+                # 0 is usually 10 (dropped leading 1)
+                # 44 is usually 11 (glyph artifact)
+                # 47 is usually 17
+                if raw_ocr == 0:
+                    ocr_ward = 10
+                elif raw_ocr == 44:
+                    ocr_ward = 11
+                elif raw_ocr == 47:
+                    ocr_ward = 17
+                else:
+                    ocr_ward = raw_ocr
         except Exception:
-            pass
+            p1_ocr = ""
+
+    # 4. Resolve final part_no
+    if fn_ward is not None and fn_ward > 0:
+        part_no = str(fn_ward)
+    elif text_ward is not None and text_ward > 0:
+        part_no = str(text_ward)
+    elif ocr_ward is not None and ocr_ward > 0:
+        part_no = str(ocr_ward)
+    else:
+        part_no = "1"
 
     # Jila Parishad (जि. प.) & Panchayat Samiti (पं. स.)
-    def _to_ascii_digits(val: str) -> str:
-        dev_digits = "०१२३४५६७८९"
-        res = ""
-        for ch in str(val or ''):
-            if ch in dev_digits:
-                res += str(dev_digits.index(ch))
-            elif ch.isdigit():
-                res += ch
-        return res.strip()
-
     jp_pat = r'(?:जि[\.\s॰०\-_/]*प[\.\s॰०\-_/]*|नज[\.\s॰०\-_/]*प[\.\s॰०\-_/]*|जिला\s*परिषद|नजलरपररषद)\s*(?:सदस्य|सदसज)?\s*(?:निर्वाचन|ननरररचन)?\s*(?:क्षेत्र|ककत|संख्या|सपखजर|क्र\.?|क्रमांक)?\s*[:\-\s=]*([0-9०-९]+)'
     ps_pat = r'(?:पं[\.\s॰०\-_/]*स[\.\s॰०\-_/]*|पप[\.\s॰०\-_/]*स[\.\s॰०\-_/]*|पंचायत\s*समिति|पपचरजत\s*सनमनत)\s*(?:सदस्य|सदसज)?\s*(?:निर्वाचन|ननरररचन)?\s*(?:क्षेत्र|ककत|संख्या|सपखजर|क्र\.?|क्रमांक)?\s*[:\-\s=]*([0-9०-९]+)'
 
@@ -573,7 +660,7 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
     doc = pymupdf.open(pdf_path)
     total_pages = len(doc)
 
-    meta = extract_voter_list_metadata(doc)
+    meta = extract_voter_list_metadata(doc, pdf_path=pdf_path)
     part_no = meta['part_no']
     jila_parishad = meta.get('jila_parishad', '')
     panchayat_samiti = meta.get('panchayat_samiti', '')
@@ -947,6 +1034,16 @@ def process_multiple_wards(pdf_paths: List[str], progress_callback: Optional[Any
     ]
     columns_13 = columns_14
 
+    # 0. Natural sort pdf_paths by explicit ward number or filename tokens
+    def _pdf_ward_sort_key(p: str):
+        fn_w = extract_ward_from_filename(p)
+        if fn_w is not None and fn_w > 0:
+            return (0, fn_w)
+        base = os.path.basename(p)
+        return (1, [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', base)])
+
+    pdf_paths = sorted(pdf_paths, key=_pdf_ward_sort_key)
+
     ward_results = []
     for ward_idx, path in enumerate(pdf_paths):
         def ward_cb(info, current_idx=ward_idx, current_path=path):
@@ -967,11 +1064,20 @@ def process_multiple_wards(pdf_paths: List[str], progress_callback: Optional[Any
         part_no = str(stats.get('part_no', '1')).strip()
 
         # Parse numeric part number for proper natural sequence
+        fn_w = extract_ward_from_filename(filename)
         try:
             part_num = int(part_no)
         except (ValueError, TypeError):
-            m = re.search(r'(?:Ward[_\s\-]*No[_\s\-]*|वार्ड[_\s\-]*|भाग[_\s\-]*)([0-9]+)', filename, re.IGNORECASE)
-            part_num = int(m.group(1)) if m else 999
+            part_num = fn_w if (fn_w is not None and fn_w > 0) else 999
+
+        # If part_num was corrupted (e.g. 0, or extreme outlier) but filename is valid:
+        if (part_num <= 0 or part_num > 60) and fn_w is not None and fn_w > 0:
+            part_num = fn_w
+            part_no = str(fn_w)
+            # Reconcile in voters
+            for v in voters:
+                v['वार्ड नं.'] = part_no
+                v['भाग संख्या'] = part_no
 
         ward_results.append({
             'path': path,
@@ -988,7 +1094,19 @@ def process_multiple_wards(pdf_paths: List[str], progress_callback: Optional[Any
             'voters': voters
         })
 
-    # Sort wards strictly in ascending sequence: Ward 1, Ward 2, Ward 3... Ward 9
+    # Batch sequence reconciliation:
+    # Ensure sequential ward numbers and resolve any remaining outliers or collisions
+    for i, w in enumerate(ward_results):
+        fn_w = extract_ward_from_filename(w['filename'])
+        if w['part_num'] <= 0 or w['part_num'] > 60 or (fn_w is not None and fn_w != w['part_num']):
+            corrected_num = fn_w if (fn_w is not None and fn_w > 0) else (i + 1)
+            w['part_num'] = corrected_num
+            w['part_no'] = str(corrected_num)
+            for v in w['voters']:
+                v['वार्ड नं.'] = str(corrected_num)
+                v['भाग संख्या'] = str(corrected_num)
+
+    # Sort wards strictly in ascending sequence: Ward 1, Ward 2, Ward 3...
     ward_results.sort(key=lambda w: w['part_num'])
 
     # 1. Build Sheet 1: वार्ड_सारांश (Summary Table)
