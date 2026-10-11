@@ -1231,12 +1231,25 @@ def api_color_parchi_export_pdf():
         candidate_info['panchayat_samiti'] = candidate_info.get('panchayat_samiti') or data.get('panchayat_samiti') or COLOR_PARCHI_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
         COLOR_PARCHI_CACHE[session_id]['custom_candidate_info'] = candidate_info
         
+        range_from = data.get('range_from')
+        range_to = data.get('range_to')
+        try:
+            range_from = int(range_from) if range_from is not None and str(range_from).strip() != '' else None
+        except (ValueError, TypeError):
+            range_from = None
+        try:
+            range_to = int(range_to) if range_to is not None and str(range_to).strip() != '' else None
+        except (ValueError, TypeError):
+            range_to = None
+
         pdf_bytes = generate_color_parchi_pdf(
             voters=voters,
             candidate_info=candidate_info,
             layout_type=layout_type,
             show_page_number=show_page_number,
-            filter_active_only=filter_active_only
+            filter_active_only=filter_active_only,
+            range_from=range_from,
+            range_to=range_to
         )
         
         cand_name = re.sub(r'[^\w\s-]', '', candidate_info.get('candidate_name', 'Pratyashi')).strip() or "Pratyashi"
