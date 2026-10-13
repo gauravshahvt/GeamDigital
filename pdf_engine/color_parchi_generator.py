@@ -161,8 +161,8 @@ def generate_color_parchi_html(
         f_cand_name = "13.5pt"
         f_slogan = "7.2pt"
         f_ribbon = "8.2pt"
-        f_data = "9.5pt"
-        f_booth = "8.2pt"
+        f_data = "11.5pt"
+        f_booth = "10.2pt"
     elif layout_type == "12":
         cols = 3
         rows = 4
@@ -513,7 +513,7 @@ body {{
 /* Left Poster Box */
 .poster-box-h {{
     background: {poster_bg_color};
-    width: 92mm;
+    width: 86mm;
     height: 100%;
     flex-shrink: 0;
     display: flex;
@@ -524,7 +524,7 @@ body {{
     overflow: hidden;
 }}
 .poster-full-box-h {{
-    width: 92mm;
+    width: 86mm;
     height: 100%;
     flex-shrink: 0;
     overflow: hidden;
@@ -672,38 +672,82 @@ body {{
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 1.8mm 3mm 0 3mm;
+    padding: 2.2mm 3.5mm 0 3.5mm;
     box-sizing: border-box;
     background: #fff;
+    overflow: hidden;
 }}
 .v-row-h {{
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: {f_data};
+    font-size: 11pt;
     line-height: 1.25;
+    color: #000;
 }}
 .v-row-top-h {{
+    font-size: 11pt;
+}}
+.serial-square-h {{
+    border: 2px solid #000;
+    padding: 0.5px 6px;
+    font-weight: 900;
+    font-size: 12.5pt;
+    display: inline-block;
+    min-width: 20px;
+    text-align: center;
+    line-height: 1.15;
+}}
+.v-name-h {{
+    font-size: 12.8pt;
+    font-weight: 900;
+    color: #000;
+}}
+.v-rel-h {{
+    font-size: 11.8pt;
+    font-weight: 800;
+    color: #000;
+}}
+.v-epic-h {{
     font-size: 10pt;
+    white-space: nowrap;
+}}
+.v-epic-num-h {{
+    font-size: 11.2pt;
+    font-weight: 900;
+    font-family: Arial, monospace;
+    letter-spacing: 0.3px;
+}}
+.v-ward-h {{
+    font-size: 12pt;
+    font-weight: 900;
+    white-space: nowrap;
+}}
+.v-jp-ps-h {{
+    font-size: 9.5pt;
+    font-weight: 800;
+    color: #1e293b;
+    white-space: nowrap;
 }}
 .v-row-booth-h {{
-    font-size: {f_booth};
-    line-height: 1.2;
+    font-size: 9.6pt;
+    font-weight: 700;
+    line-height: 1.25;
     color: #111;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding-top: 0.5px;
+    padding-top: 1px;
 }}
 .voting-time-bar-h {{
     background: {time_color};
     color: #fff;
     text-align: center;
-    font-size: 8pt;
-    font-weight: 800;
-    padding: 2px 0;
-    margin: 1mm -3mm 0 -3mm;
-    letter-spacing: 0.2px;
+    font-size: 9.4pt;
+    font-weight: 900;
+    padding: 2.6px 0;
+    margin: 1mm -3.5mm 0 -3.5mm;
+    letter-spacing: 0.3px;
 }}
 </style>
 </head>
@@ -775,40 +819,40 @@ body {{
             <div class="voter-details-h">
                 <div class="v-row-h v-row-top-h">
                     <div class="v-col">
-                        क्रम सं. : <span class="serial-square">{serial}</span>
+                        क्रम सं. : <span class="serial-square-h">{serial}</span>
                     </div>
-                    {f'<div class="v-col" style="font-size: 8.2pt; font-weight: 700; color: #1e293b;">जि. प. : <b>{jp}</b> &nbsp;|&nbsp; पं. स. : <b>{ps}</b></div>' if (jp or ps) else ''}
-                    <div class="v-col font-bold">
+                    {f'<div class="v-col v-jp-ps-h">जि. प. : <b>{jp}</b> &nbsp;|&nbsp; पं. स. : <b>{ps}</b></div>' if (jp or ps) else ''}
+                    <div class="v-col v-ward-h">
                         वार्ड नं.- {ward_val}
                     </div>
                 </div>
 
                 <div class="v-row-h">
                     <div class="v-col">
-                        नाम : <span class="font-bold">{name}</span>
+                        नाम : <span class="v-name-h">{name}</span>
                     </div>
-                    <div class="v-col">
-                        भाग सं <span class="font-bold">{part_no}</span>
+                    <div class="v-col" style="font-size: 11pt;">
+                        भाग सं <b style="font-size: 11.5pt;">{part_no}</b>
                     </div>
-                    <div class="v-col v-epic">
-                        Voter ID <span class="font-bold font-mono">{epic}</span>
+                    <div class="v-col v-epic-h">
+                        Voter ID <span class="v-epic-num-h">{epic}</span>
                     </div>
                 </div>
 
                 <div class="v-row-h">
                     <div class="v-col">
-                        पिता/पति : <span class="font-bold">{rel}</span>
+                        पिता/पति : <span class="v-rel-h">{rel}</span>
                     </div>
-                    <div class="v-col">
-                        मकान सं : <span class="font-bold">{house}</span>
+                    <div class="v-col" style="font-size: 11pt;">
+                        मकान सं : <b style="font-size: 11.5pt;">{house}</b>
                     </div>
-                    <div class="v-col font-bold">
+                    <div class="v-col" style="font-size: 11.5pt; font-weight: 900;">
                         {gender_age_str}
                     </div>
                 </div>
 
                 <div class="v-row-booth-h">
-                    मतदान केंद्र - {booth}
+                    मतदान केंद्र - <b>{booth}</b>
                 </div>
 
                 <div class="voting-time-bar-h">
