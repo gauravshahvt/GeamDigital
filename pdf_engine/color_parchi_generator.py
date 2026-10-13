@@ -151,7 +151,19 @@ def generate_color_parchi_html(
         filtered = [v for v in filtered if r_from <= (v.get('serial') or 0) <= r_to]
 
     layout_type = str(layout_type).strip()
-    if layout_type == "12":
+    if layout_type == "4":
+        cols = 1
+        rows = 4
+        col_w = "202mm"
+        cards_per_page = 4
+        gap_w = "1.5mm"
+        poster_h = "100%"
+        f_cand_name = "13.5pt"
+        f_slogan = "7.2pt"
+        f_ribbon = "8.2pt"
+        f_data = "9.5pt"
+        f_booth = "8.2pt"
+    elif layout_type == "12":
         cols = 3
         rows = 4
         col_w = "66mm"
@@ -485,6 +497,214 @@ body {{
     border: 1px dashed #ccc;
     background: #fafafa;
 }}
+
+/* Layout 4: Horizontal Split (Left Candidate Poster + Right Voter Slip) */
+.color-parchi-card.h-split {{
+    display: flex;
+    flex-direction: row;
+    height: {card_height};
+    width: 202mm;
+    border: 1.2px solid #000;
+    background: #fff;
+    box-sizing: border-box;
+    overflow: hidden;
+}}
+
+/* Left Poster Box */
+.poster-box-h {{
+    background: {poster_bg_color};
+    width: 92mm;
+    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5mm 1.8mm;
+    box-sizing: border-box;
+    overflow: hidden;
+}}
+.poster-full-box-h {{
+    width: 92mm;
+    height: 100%;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    box-sizing: border-box;
+}}
+.poster-ribbon-h {{
+    text-align: center;
+    font-size: {f_ribbon};
+    font-weight: 800;
+    color: #003b73;
+    line-height: 1.15;
+    padding-bottom: 1px;
+}}
+.poster-body-h {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5mm;
+    flex: 1;
+    margin: 0.5mm 0;
+}}
+.symbol-col-h {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20mm;
+    flex-shrink: 0;
+}}
+.symbol-img-h {{
+    height: 20mm;
+    width: 20mm;
+    object-fit: contain;
+}}
+.symbol-lbl-h {{
+    font-size: 5.8pt;
+    font-weight: 800;
+    color: #111;
+    margin-top: 1px;
+}}
+.center-col-h {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex: 1;
+}}
+.candidate-name-h {{
+    font-size: {f_cand_name};
+    font-weight: 900;
+    color: {candidate_name_color};
+    letter-spacing: -0.2px;
+    line-height: 1.05;
+    text-shadow: 0.5px 0.5px 0 #fff;
+}}
+.btn-box-h {{
+    background: {btn_box_color};
+    color: #fff;
+    font-size: 8.2pt;
+    font-weight: 800;
+    padding: 1px 8px;
+    border-radius: 9999px;
+    margin: 2px 0 0 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}}
+.btn-num-h {{
+    background: #fff;
+    color: {btn_box_color};
+    border-radius: 9999px;
+    width: 15px;
+    height: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8.2pt;
+    font-weight: 900;
+}}
+.photo-col-h {{
+    width: 21mm;
+    height: 25mm;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}}
+.candidate-photo-h {{
+    width: 21mm;
+    height: 25mm;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 0.8px solid rgba(0,0,0,0.15);
+}}
+.slogan-box-h {{
+    text-align: center;
+    font-size: {f_slogan};
+    font-weight: 800;
+    color: #92400e;
+    line-height: 1.15;
+    letter-spacing: -0.1px;
+}}
+
+/* Middle Vertical Cut Divider */
+.vertical-cut-bar {{
+    width: 5mm;
+    flex-shrink: 0;
+    height: 100%;
+    border-left: 1.2px dashed #111;
+    border-right: 1.2px dashed #111;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5mm 0;
+    box-sizing: border-box;
+    line-height: 1;
+}}
+.v-scissor {{
+    font-size: 8.5pt;
+    color: #000;
+    line-height: 1;
+}}
+.v-cut-label {{
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 5.5pt;
+    font-weight: 800;
+    color: #111;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    line-height: 1;
+}}
+
+/* Right Voter Details Box */
+.voter-details-h {{
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.8mm 3mm 0 3mm;
+    box-sizing: border-box;
+    background: #fff;
+}}
+.v-row-h {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: {f_data};
+    line-height: 1.25;
+}}
+.v-row-top-h {{
+    font-size: 10pt;
+}}
+.v-row-booth-h {{
+    font-size: {f_booth};
+    line-height: 1.2;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-top: 0.5px;
+}}
+.voting-time-bar-h {{
+    background: {time_color};
+    color: #fff;
+    text-align: center;
+    font-size: 8pt;
+    font-weight: 800;
+    padding: 2px 0;
+    margin: 1mm -3mm 0 -3mm;
+    letter-spacing: 0.2px;
+}}
 </style>
 </head>
 <body>
@@ -511,36 +731,125 @@ body {{
                 ps = v.get('panchayat_samiti') or info.get('panchayat_samiti', '')
                 gender_age_str = f"{gender} {age}".strip()
 
-                if poster_img and str(poster_img).strip() not in ['', 'null', 'undefined', 'None']:
-                    poster_html = f"""<div class="poster-full-box"><img src="{poster_img}" class="poster-full-img" alt="Candidate Poster"></div>"""
-                else:
-                    poster_html = f"""
-                    <div class="poster-box">
-                        <div class="poster-ribbon">
-                            {header_prefix} <span class="ward-badge">{ward_badge}</span> {header_suffix}
-                        </div>
-                        <div class="poster-body">
-                            <div class="symbol-col">
-                                <img src="{symbol_img}" class="symbol-img">
-                                <div class="symbol-lbl">चुनाव चिन्ह</div>
+                if layout_type == "4":
+                    if poster_img and str(poster_img).strip() not in ['', 'null', 'undefined', 'None']:
+                        poster_html = f"""<div class="poster-full-box-h"><img src="{poster_img}" class="poster-full-img" alt="Candidate Poster"></div>"""
+                    else:
+                        poster_html = f"""
+                        <div class="poster-box-h">
+                            <div class="poster-ribbon-h">
+                                {header_prefix} <span class="ward-badge">{ward_badge}</span> {header_suffix}
                             </div>
-                            <div class="center-col">
-                                <div class="candidate-name">{candidate_name}</div>
-                                <div class="btn-box">
-                                    बटन नं. <span class="btn-num">{button_no}</span>
+                            <div class="poster-body-h">
+                                <div class="symbol-col-h">
+                                    <img src="{symbol_img}" class="symbol-img-h">
+                                    <div class="symbol-lbl-h">चुनाव चिन्ह</div>
                                 </div>
-                                <div class="slogan-txt">
-                                    {slogan}
+                                <div class="center-col-h">
+                                    <div class="candidate-name-h">{candidate_name}</div>
+                                    <div class="btn-box-h">
+                                        बटन नं. <span class="btn-num-h">{button_no}</span>
+                                    </div>
+                                </div>
+                                <div class="photo-col-h">
+                                    <img src="{candidate_photo}" class="candidate-photo-h">
                                 </div>
                             </div>
-                            <div class="photo-col">
-                                <img src="{candidate_photo}" class="candidate-photo">
+                            <div class="slogan-box-h">
+                                {slogan}
                             </div>
                         </div>
-                    </div>
-                    """
+                        """
 
-                card_html = f"""
+                    card_html = f"""
+    <div class="parchi-cell">
+        <div class="color-parchi-card h-split">
+            {poster_html}
+            
+            <div class="vertical-cut-bar">
+                <span class="v-scissor">✂</span>
+                <span class="v-cut-label">मतदान केंद्र पर जाने से पूर्व बाईं ओर का हिस्सा फाड़ देवे</span>
+                <span class="v-scissor">✂</span>
+            </div>
+
+            <div class="voter-details-h">
+                <div class="v-row-h v-row-top-h">
+                    <div class="v-col">
+                        क्रम सं. : <span class="serial-square">{serial}</span>
+                    </div>
+                    {f'<div class="v-col" style="font-size: 8.2pt; font-weight: 700; color: #1e293b;">जि. प. : <b>{jp}</b> &nbsp;|&nbsp; पं. स. : <b>{ps}</b></div>' if (jp or ps) else ''}
+                    <div class="v-col font-bold">
+                        वार्ड नं.- {ward_val}
+                    </div>
+                </div>
+
+                <div class="v-row-h">
+                    <div class="v-col">
+                        नाम : <span class="font-bold">{name}</span>
+                    </div>
+                    <div class="v-col">
+                        भाग सं <span class="font-bold">{part_no}</span>
+                    </div>
+                    <div class="v-col v-epic">
+                        Voter ID <span class="font-bold font-mono">{epic}</span>
+                    </div>
+                </div>
+
+                <div class="v-row-h">
+                    <div class="v-col">
+                        पिता/पति : <span class="font-bold">{rel}</span>
+                    </div>
+                    <div class="v-col">
+                        मकान सं : <span class="font-bold">{house}</span>
+                    </div>
+                    <div class="v-col font-bold">
+                        {gender_age_str}
+                    </div>
+                </div>
+
+                <div class="v-row-booth-h">
+                    मतदान केंद्र - {booth}
+                </div>
+
+                <div class="voting-time-bar-h">
+                    मतदान समय : {voting_time}
+                </div>
+            </div>
+        </div>
+        {page_num_html}
+    </div>
+"""
+                else:
+                    if poster_img and str(poster_img).strip() not in ['', 'null', 'undefined', 'None']:
+                        poster_html = f"""<div class="poster-full-box"><img src="{poster_img}" class="poster-full-img" alt="Candidate Poster"></div>"""
+                    else:
+                        poster_html = f"""
+                        <div class="poster-box">
+                            <div class="poster-ribbon">
+                                {header_prefix} <span class="ward-badge">{ward_badge}</span> {header_suffix}
+                            </div>
+                            <div class="poster-body">
+                                <div class="symbol-col">
+                                    <img src="{symbol_img}" class="symbol-img">
+                                    <div class="symbol-lbl">चुनाव चिन्ह</div>
+                                </div>
+                                <div class="center-col">
+                                    <div class="candidate-name">{candidate_name}</div>
+                                    <div class="btn-box">
+                                        बटन नं. <span class="btn-num">{button_no}</span>
+                                    </div>
+                                    <div class="slogan-txt">
+                                        {slogan}
+                                    </div>
+                                </div>
+                                <div class="photo-col">
+                                    <img src="{candidate_photo}" class="candidate-photo">
+                                </div>
+                            </div>
+                        </div>
+                        """
+
+                    card_html = f"""
     <div class="parchi-cell">
         <div class="color-parchi-card">
             {poster_html}

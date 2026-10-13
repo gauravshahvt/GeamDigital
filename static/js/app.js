@@ -2196,7 +2196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (colorCurrentPageText) colorCurrentPageText.textContent = colorState.currentPage;
             if (colorTotalPagesText) colorTotalPagesText.textContent = colorState.totalPages;
 
-            const cardsPerPage = layoutType === '12' ? 12 : 8;
+            const cardsPerPage = layoutType === '4' ? 4 : (layoutType === '12' ? 12 : 8);
             const startIdx = (colorState.currentPage - 1) * cardsPerPage + 1;
             const endIdx = Math.min(colorState.currentPage * cardsPerPage, res.total_voters);
             if (colorVotersRangeText) {
@@ -2216,6 +2216,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (colorRefreshBtn) {
         colorRefreshBtn.addEventListener('click', () => {
+            fetchColorParchiPreview();
+        });
+    }
+
+    if (colorLayoutTypeSelect) {
+        colorLayoutTypeSelect.addEventListener('change', () => {
+            colorState.currentPage = 1;
+            fetchColorParchiPreview();
+        });
+    }
+
+    if (colorShowPageNumCheck) {
+        colorShowPageNumCheck.addEventListener('change', () => {
+            fetchColorParchiPreview();
+        });
+    }
+
+    if (colorActiveOnlyCheck) {
+        colorActiveOnlyCheck.addEventListener('change', () => {
+            colorState.currentPage = 1;
+            fetchColorParchiPreview();
+        });
+    }
+
+    if (colorVotingTimeInput) {
+        colorVotingTimeInput.addEventListener('input', () => {
             fetchColorParchiPreview();
         });
     }

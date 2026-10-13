@@ -360,10 +360,11 @@ class ColorVoterSlipDesktopApp(ctk.CTk):
         ctk.CTkLabel(c3, text="लेआउट साइज़:", font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold")).grid(row=1, column=0, padx=12, pady=4, sticky="w")
         self.layout_seg = ctk.CTkSegmentedButton(
             c3,
-            values=["A4 - 8 Slips (2x4) Standard", "A4 - 12 Slips (3x4) Compact"],
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold")
+            values=["A4 - 8 Slips (2x4)", "A4 - 12 Slips (3x4)", "A4 - 4 Slips (Left Photo + Right Slip)"],
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            command=lambda v: self._update_preview()
         )
-        self.layout_seg.set("A4 - 8 Slips (2x4) Standard")
+        self.layout_seg.set("A4 - 8 Slips (2x4)")
         self.layout_seg.grid(row=1, column=1, columnspan=2, padx=(0, 12), pady=4, sticky="ew")
 
         # Checkboxes
@@ -865,7 +866,13 @@ class ColorVoterSlipDesktopApp(ctk.CTk):
         try:
             voters = self.parsed_data['voters']
             cand_info = self._gather_candidate_info()
-            layout_type = "12" if "12" in self.layout_seg.get() else "8"
+            layout_val = self.layout_seg.get()
+            if "4" in layout_val:
+                layout_type = "4"
+            elif "12" in layout_val:
+                layout_type = "12"
+            else:
+                layout_type = "8"
             show_pg = self.page_num_var.get()
             act_only = self.active_only_var.get()
 
@@ -964,7 +971,13 @@ class ColorVoterSlipDesktopApp(ctk.CTk):
 
             out_dir = os.path.dirname(self.current_excel_path)
             cand_info_base = self._gather_candidate_info()
-            layout_type = "12" if "12" in self.layout_seg.get() else "8"
+            layout_val = self.layout_seg.get()
+            if "4" in layout_val:
+                layout_type = "4"
+            elif "12" in layout_val:
+                layout_type = "12"
+            else:
+                layout_type = "8"
             show_pg = self.page_num_var.get()
             act_only = self.active_only_var.get()
 
