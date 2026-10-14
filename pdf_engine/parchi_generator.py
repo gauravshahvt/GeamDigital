@@ -2,9 +2,11 @@ import os
 import re
 import subprocess
 import tempfile
+from collections import OrderedDict
 from io import BytesIO
 from typing import List, Dict, Any, Optional, Tuple
 import openpyxl
+import pymupdf
 
 CHROME_PATHS = [
     r'C:\Program Files\Google\Chrome\Application\chrome.exe',
@@ -19,6 +21,109 @@ def get_browser_executable() -> Optional[str]:
         if os.path.exists(p):
             return p
     return None
+
+def _run_browser_print_to_pdf(browser_bin: str, html_file: str, pdf_file: str, timeout: int = 120) -> None:
+    """Executes headless Chrome or Edge to render HTML to PDF."""
+    cmd_new = [
+        browser_bin,
+        "--headless=new",
+        "--disable-gpu",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--run-all-compositor-stages-before-draw",
+        "--no-pdf-header-footer",
+        "--disable-software-rasterizer",
+        "--hide-scrollbars",
+        "--disable-extensions",
+        "--disable-background-networking",
+        "--mute-audio",
+        f"--print-to-pdf={pdf_file}",
+        html_file
+    ]
+    try:
+        res = subprocess.run(cmd_new, capture_output=True, text=True, timeout=timeout)
+        if res.returncode == 0 and os.path.exists(pdf_file) and os.path.getsize(pdf_file) > 1000:
+            return
+    except Exception:
+        pass
+
+    # Fallback to legacy --headless
+    cmd_legacy = [
+        browser_bin,
+        "--headless",
+        "--disable-gpu",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        f"--print-to-pdf={pdf_file}",
+        "--no-pdf-header-footer",
+        html_file
+    ]
+    res2 = subprocess.run(cmd_legacy, capture_output=True, text=True, timeout=timeout)
+    if res2.returncode != 0 or not os.path.exists(pdf_file) or os.path.getsize(pdf_file) <= 1000:
+        raise RuntimeError(f"Browser PDF generation failed: {res2.stderr}")
+
+DEV_DIGITS = "०१२३४५६७८९"
+
+def extract_voter_ward(v: Dict[str, Any]) -> str:
+    """
+    Extracts and normalizes the ward/part number from a voter dictionary.
+    Handles 'ward', 'part_no', 'ward_no', Hindi digits, English digits, etc.
+    """
+    w = v.get('ward')
+    if w is None or str(w).strip() == '':
+        w = v.get('part_no')
+    if w is None or str(w).strip() == '':
+        w = v.get('ward_no')
+    if w is None or str(w).strip() == '':
+        return '1'
+
+    w_str = str(w).strip()
+    if w_str.endswith('.0'):
+        w_str = w_str[:-2].strip()
+
+    conv = [str(DEV_DIGITS.index(ch)) if ch in DEV_DIGITS else ch for ch in w_str]
+    w_str = "".join(conv)
+
+    digits = re.findall(r'\d+', w_str)
+    if digits:
+        return str(int(digits[0]))
+    return w_str
+
+def chunk_voters_by_ward(voters: List[Dict[str, Any]], cards_per_page: int) -> List[List[Dict[str, Any]]]:
+    """
+    Partitions voters by ward so that every ward finishes its last page
+    (padded with empty slots if needed), and the next ward always starts
+    at Slot 1 on a fresh new page.
+    """
+    if not voters:
+        return [[]]
+
+    ward_groups = OrderedDict()
+    for v in voters:
+        w_key = extract_voter_ward(v)
+        if w_key not in ward_groups:
+            ward_groups[w_key] = []
+        ward_groups[w_key].append(v)
+
+    if len(ward_groups) <= 1:
+        total = len(voters)
+        pages = max(1, (total + cards_per_page - 1) // cards_per_page)
+        return [voters[i * cards_per_page : (i + 1) * cards_per_page] for i in range(pages)]
+
+    # Sort wards numerically (1, 2, ..., 10, 11) or alphabetically for non-numeric
+    sorted_keys = sorted(
+        ward_groups.keys(),
+        key=lambda x: (0, int(x)) if x.isdigit() else (1, str(x))
+    )
+
+    all_page_chunks: List[List[Dict[str, Any]]] = []
+    for w_key in sorted_keys:
+        w_voters = ward_groups[w_key]
+        w_pages = max(1, (len(w_voters) + cards_per_page - 1) // cards_per_page)
+        for p in range(w_pages):
+            all_page_chunks.append(w_voters[p * cards_per_page : (p + 1) * cards_per_page])
+
+    return all_page_chunks if all_page_chunks else [[]]
 
 def predict_gender(name: str, relative_name: str = '') -> str:
     """
@@ -438,7 +543,9 @@ def generate_parchi_html(
     for_preview: bool = False,
     preview_page: int = 1,
     jila_parishad: Optional[str] = None,
-    panchayat_samiti: Optional[str] = None
+    panchayat_samiti: Optional[str] = None,
+    page_start_offset: int = 0,
+    precomputed_page_chunks: Optional[List[List[Dict[str, Any]]]] = None
 ) -> Tuple[str, int, int]:
     """
     Renders HTML for Plain Matdata Parchi per A4 page.
@@ -499,17 +606,22 @@ def generate_parchi_html(
         gap_w = "1.2mm"
 
     card_height = "67.5mm" if show_page_number else "70.2mm"
-
     total_voters = len(filtered)
-    total_pages = max(1, (total_voters + cards_per_page - 1) // cards_per_page)
 
-    if for_preview:
-        p_idx = max(1, min(preview_page, total_pages))
-        page_chunks = [filtered[(p_idx - 1) * cards_per_page : p_idx * cards_per_page]]
-        display_pages = [p_idx]
+    if precomputed_page_chunks is not None:
+        page_chunks = precomputed_page_chunks
+        total_pages = len(page_chunks)
+        display_pages = [page_start_offset + i for i in range(1, total_pages + 1)]
     else:
-        page_chunks = [filtered[i * cards_per_page : (i + 1) * cards_per_page] for i in range(total_pages)]
-        display_pages = list(range(1, total_pages + 1))
+        all_page_chunks = chunk_voters_by_ward(filtered, cards_per_page)
+        total_pages = len(all_page_chunks)
+        if for_preview:
+            p_idx = max(1, min(preview_page, total_pages))
+            page_chunks = [all_page_chunks[p_idx - 1]]
+            display_pages = [p_idx]
+        else:
+            page_chunks = all_page_chunks
+            display_pages = [page_start_offset + i for i in range(1, total_pages + 1)]
 
     html = f"""<!DOCTYPE html>
 <html lang="hi">
@@ -659,7 +771,10 @@ body {{
             if card_idx < len(chunk):
                 v = chunk[card_idx]
                 serial = v.get('serial', '')
-                ward = v.get('ward') or v.get('part_no', '')
+                ward_raw = v.get('ward') or v.get('part_no', '')
+                ward = str(ward_raw).strip()
+                if ward.endswith('.0'):
+                    ward = ward[:-2]
                 epic = v.get('epic', '')
                 name = v.get('name', '')
                 rel = v.get('relative_name', '')
@@ -735,45 +850,80 @@ def generate_parchi_pdf(
 ) -> bytes:
     """
     Generates a production-ready A4 PDF with Plain Matdata Parchi per sheet using headless Chrome/Edge.
+    Chunks pages by ward to ensure each ward starts on a new page and finishes cleanly.
+    Uses page batching and PyMuPDF merging for high-speed, zero-timeout processing.
     """
-    html_content, total_pages, total_voters = generate_parchi_html(
-        voters=voters,
-        panchayat_name=panchayat_name,
-        voting_time=voting_time,
-        filter_active_only=filter_active_only,
-        layout_type=layout_type,
-        show_page_number=show_page_number,
-        range_from=range_from,
-        range_to=range_to,
-        for_preview=False,
-        jila_parishad=jila_parishad,
-        panchayat_samiti=panchayat_samiti
-    )
-
     browser_bin = get_browser_executable()
     if not browser_bin:
         raise RuntimeError("No headless Chrome or Edge browser found on system to generate PDF.")
 
+    filtered = voters
+    if filter_active_only:
+        filtered = [v for v in voters if v.get('status') != 'Deleted']
+
+    if range_from is not None or range_to is not None:
+        r_from = range_from if range_from is not None else 1
+        r_to = range_to if range_to is not None else 999999
+        filtered = [v for v in filtered if r_from <= (v.get('serial') or 0) <= r_to]
+
+    if not filtered:
+        raise ValueError("कोई सक्रिय मतदाता रिकॉर्ड उपलब्ध नहीं है।")
+
+    layout_type = str(layout_type).strip()
+    if layout_type == "16":
+        cards_per_page = 16
+    elif layout_type == "8":
+        cards_per_page = 8
+    else:
+        cards_per_page = 12
+
+    all_page_chunks = chunk_voters_by_ward(filtered, cards_per_page)
+    total_pages = len(all_page_chunks)
+
+    PAGE_BATCH = 25
+    if total_pages <= PAGE_BATCH:
+        page_batches = [all_page_chunks]
+    else:
+        page_batches = [all_page_chunks[i : i + PAGE_BATCH] for i in range(0, total_pages, PAGE_BATCH)]
+
+    merged_doc = pymupdf.open()
+    total_rendered_pages = 0
+
     with tempfile.TemporaryDirectory() as tmpdir:
-        html_file = os.path.join(tmpdir, "parchi.html")
-        pdf_file = os.path.join(tmpdir, "parchi.pdf")
+        for idx, batch_chunks in enumerate(page_batches, 1):
+            html_content, _, _ = generate_parchi_html(
+                voters=filtered,
+                panchayat_name=panchayat_name,
+                voting_time=voting_time,
+                filter_active_only=False,  # Already filtered
+                layout_type=layout_type,
+                show_page_number=show_page_number,
+                for_preview=False,
+                jila_parishad=jila_parishad,
+                panchayat_samiti=panchayat_samiti,
+                page_start_offset=total_rendered_pages,
+                precomputed_page_chunks=batch_chunks
+            )
 
-        with open(html_file, "w", encoding="utf-8") as f:
-            f.write(html_content)
+            batch_html_file = os.path.join(tmpdir, f"parchi_batch_{idx}.html")
+            batch_pdf_file = os.path.join(tmpdir, f"parchi_batch_{idx}.pdf")
 
-        cmd = [
-            browser_bin,
-            "--headless",
-            "--disable-gpu",
-            f"--print-to-pdf={pdf_file}",
-            "--no-pdf-header-footer",
-            html_file
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        if res.returncode != 0 or not os.path.exists(pdf_file):
-            raise RuntimeError(f"Browser PDF generation failed: {res.stderr}")
+            with open(batch_html_file, "w", encoding="utf-8") as f:
+                f.write(html_content)
 
-        with open(pdf_file, "rb") as f:
-            pdf_bytes = f.read()
+            _run_browser_print_to_pdf(browser_bin, batch_html_file, batch_pdf_file, timeout=120)
 
+            chunk_doc = pymupdf.open(batch_pdf_file)
+            merged_doc.insert_pdf(chunk_doc)
+            total_rendered_pages += len(chunk_doc)
+            chunk_doc.close()
+
+            try:
+                os.remove(batch_html_file)
+                os.remove(batch_pdf_file)
+            except Exception:
+                pass
+
+        pdf_bytes = merged_doc.tobytes()
+        merged_doc.close()
         return pdf_bytes

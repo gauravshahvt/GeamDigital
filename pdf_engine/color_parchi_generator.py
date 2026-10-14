@@ -6,7 +6,7 @@ import base64
 from io import BytesIO
 from typing import List, Dict, Any, Optional, Tuple, Callable
 import pymupdf
-from pdf_engine.parchi_generator import get_browser_executable
+from pdf_engine.parchi_generator import get_browser_executable, extract_voter_ward, chunk_voters_by_ward
 
 # ==========================================
 # DEFAULT VECTOR ASSETS (SVGs as Data URLs)
@@ -110,7 +110,8 @@ def generate_color_parchi_html(
     range_to: Optional[int] = None,
     for_preview: bool = False,
     preview_page: int = 1,
-    page_start_offset: int = 0
+    page_start_offset: int = 0,
+    precomputed_page_chunks: Optional[List[List[Dict[str, Any]]]] = None
 ) -> Tuple[str, int, int]:
     """
     Renders high-quality HTML for Feature 3: Color Voter Slip with Candidate Poster.
@@ -190,15 +191,21 @@ def generate_color_parchi_html(
 
     card_height = "67.5mm" if show_page_number else "70.2mm"
     total_voters = len(filtered)
-    total_pages = max(1, (total_voters + cards_per_page - 1) // cards_per_page)
 
-    if for_preview:
-        p_idx = max(1, min(preview_page, total_pages))
-        page_chunks = [filtered[(p_idx - 1) * cards_per_page : p_idx * cards_per_page]]
-        display_pages = [p_idx]
-    else:
-        page_chunks = [filtered[i * cards_per_page : (i + 1) * cards_per_page] for i in range(total_pages)]
+    if precomputed_page_chunks is not None:
+        page_chunks = precomputed_page_chunks
+        total_pages = len(page_chunks)
         display_pages = [page_start_offset + i for i in range(1, total_pages + 1)]
+    else:
+        all_page_chunks = chunk_voters_by_ward(filtered, cards_per_page)
+        total_pages = len(all_page_chunks)
+        if for_preview:
+            p_idx = max(1, min(preview_page, total_pages))
+            page_chunks = [all_page_chunks[p_idx - 1]]
+            display_pages = [p_idx]
+        else:
+            page_chunks = all_page_chunks
+            display_pages = [page_start_offset + i for i in range(1, total_pages + 1)]
 
     html = f"""<!DOCTYPE html>
 <html lang="hi">
@@ -763,7 +770,11 @@ body {{
                 v = chunk[card_idx]
                 serial = v.get('serial', '')
                 part_no = v.get('part_no', '1')
-                ward_val = v.get('ward', v.get('part_no', ward_badge))
+                v_ward = v.get('ward') or v.get('part_no') or ward_badge
+                w_str = str(v_ward).strip()
+                if w_str.endswith('.0'):
+                    w_str = w_str[:-2]
+                ward_val = w_str
                 epic = v.get('epic', '')
                 name = v.get('name', '')
                 rel = v.get('relative_name', '')
@@ -1038,42 +1049,52 @@ def generate_color_parchi_pdf(
     if total_voters == 0:
         raise ValueError("कोई सक्रिय मतदाता रिकॉर्ड उपलब्ध नहीं है।")
 
-    # Chunking strategy: 200 voters per batch (~25 pages of 8 slips, or ~17 pages of 12 slips)
-    # Renders in ~5-8 seconds per chunk, avoiding browser memory overload
-    CHUNK_SIZE = 200
-
-    if total_voters <= CHUNK_SIZE:
-        chunks = [filtered]
+    layout_type = str(layout_type).strip()
+    if layout_type == "4":
+        cards_per_page = 4
+    elif layout_type == "12":
+        cards_per_page = 12
     else:
-        chunks = [filtered[i:i + CHUNK_SIZE] for i in range(0, total_voters, CHUNK_SIZE)]
+        cards_per_page = 8
 
-    total_chunks = len(chunks)
+    all_page_chunks = chunk_voters_by_ward(filtered, cards_per_page)
+    total_pages = len(all_page_chunks)
+
+    # Chunking strategy: 25 pages per batch
+    PAGE_BATCH = 25
+    if total_pages <= PAGE_BATCH:
+        page_batches = [all_page_chunks]
+    else:
+        page_batches = [all_page_chunks[i : i + PAGE_BATCH] for i in range(0, total_pages, PAGE_BATCH)]
+
+    total_chunks = len(page_batches)
     merged_doc = pymupdf.open()
     total_rendered_pages = 0
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        for idx, chunk in enumerate(chunks, 1):
+        for idx, batch_chunks in enumerate(page_batches, 1):
             if progress_callback:
                 try:
                     progress_callback({
                         'chunk': idx,
                         'total_chunks': total_chunks,
-                        'voters_processed': min(idx * CHUNK_SIZE, total_voters),
-                        'total_voters': total_voters,
+                        'pages_processed': total_rendered_pages,
+                        'total_pages': total_pages,
                         'percent': round(((idx - 1) / total_chunks) * 100, 1),
-                        'status': f"प्रोसेसिंग: बैच {idx}/{total_chunks} ({len(chunk)} पर्चियां)..."
+                        'status': f"प्रोसेसिंग: बैच {idx}/{total_chunks} ({len(batch_chunks)} पृष्ठ)..."
                     })
                 except Exception:
                     pass
 
             html_content, chunk_pages, _ = generate_color_parchi_html(
-                voters=chunk,
+                voters=filtered,
                 candidate_info=candidate_info,
                 layout_type=layout_type,
                 show_page_number=show_page_number,
                 filter_active_only=False,  # Already filtered
                 for_preview=False,
-                page_start_offset=total_rendered_pages
+                page_start_offset=total_rendered_pages,
+                precomputed_page_chunks=batch_chunks
             )
 
             chunk_html_file = os.path.join(tmpdir, f"parchi_chunk_{idx}.html")
