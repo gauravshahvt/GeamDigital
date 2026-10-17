@@ -6,7 +6,13 @@ import base64
 from io import BytesIO
 from typing import List, Dict, Any, Optional, Tuple, Callable
 import pymupdf
-from pdf_engine.parchi_generator import get_browser_executable, extract_voter_ward, chunk_voters_by_ward
+from pdf_engine.parchi_generator import (
+    get_browser_executable,
+    extract_voter_ward,
+    chunk_voters_by_ward,
+    format_booth_text,
+    get_booth_style
+)
 
 # ==========================================
 # DEFAULT VECTOR ASSETS (SVGs as Data URLs)
@@ -485,9 +491,14 @@ body {{
     font-size: {f_booth};
     line-height: 1.2;
     color: #111;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    word-break: break-word;
+    min-height: 20px;
+    max-height: 34px;
     padding-top: 0.5px;
 }}
 .voting-time-bar {{
@@ -739,11 +750,16 @@ body {{
 .v-row-booth-h {{
     font-size: 9.6pt;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.2;
     color: #111;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    word-break: break-word;
+    min-height: 22px;
+    max-height: 36px;
     padding-top: 1px;
 }}
 .voting-time-bar-h {{
@@ -782,6 +798,9 @@ body {{
                 gender = v.get('gender', '')
                 house = v.get('house', '1')
                 booth = v.get('booth_address', '')
+                clean_booth = format_booth_text(booth)
+                booth_display = f"मतदान केंद्र - {clean_booth}" if clean_booth else "मतदान केंद्र - "
+                booth_f_sz, booth_lh = get_booth_style(booth_display, layout_type)
                 jp = v.get('jila_parishad') or info.get('jila_parishad', '')
                 ps = v.get('panchayat_samiti') or info.get('panchayat_samiti', '')
                 gender_age_str = f"{gender} {age}".strip()
@@ -862,8 +881,8 @@ body {{
                     </div>
                 </div>
 
-                <div class="v-row-booth-h">
-                    मतदान केंद्र - <b>{booth}</b>
+                <div class="v-row-booth-h" style="font-size: {booth_f_sz}; line-height: {booth_lh};">
+                    मतदान केंद्र - <b>{clean_booth}</b>
                 </div>
 
                 <div class="voting-time-bar-h">
@@ -950,8 +969,8 @@ body {{
                     </div>
                 </div>
 
-                <div class="v-row-booth">
-                    मतदान केंद्र - {booth}
+                <div class="v-row-booth" style="font-size: {booth_f_sz}; line-height: {booth_lh};">
+                    {booth_display}
                 </div>
 
                 <div class="voting-time-bar">

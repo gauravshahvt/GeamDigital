@@ -125,6 +125,65 @@ def chunk_voters_by_ward(voters: List[Dict[str, Any]], cards_per_page: int) -> L
 
     return all_page_chunks if all_page_chunks else [[]]
 
+def format_booth_text(booth: Any) -> str:
+    """Cleans up booth address string and strips redundant duplicate prefixes."""
+    b = str(booth or '').strip()
+    b = re.sub(r'[\r\n\t]+', ' ', b)
+    b = re.sub(r'\s{2,}', ' ', b).strip()
+    if not b:
+        return ''
+    pattern = r'^(?:मतदान\s*क(?:ें|[ेे]न्)द[््र]र|मतदान\s*स्थल|बूथ)\s*(?:का\s*पता|का\s*नाम)?\s*[:\-\s=]*'
+    m = re.match(pattern, b, re.IGNORECASE)
+    if m:
+        sub = b[m.end():].strip()
+        if sub:
+            return sub
+    return b
+
+def get_booth_style(booth_text: str, layout: str) -> Tuple[str, str]:
+    """
+    Computes dynamic font size and line height tailored so long booth addresses
+    comfortably adjust and wrap in up to 2 lines without truncation.
+    """
+    length = len(booth_text)
+    layout = str(layout).strip()
+    if layout == '4':
+        if length > 95:
+            return '7.5pt', '1.10'
+        elif length > 70:
+            return '8.5pt', '1.15'
+        elif length > 45:
+            return '9.2pt', '1.20'
+        else:
+            return '10.2pt', '1.25'
+    elif layout == '8':
+        if length > 95:
+            return '6.2pt', '1.08'
+        elif length > 70:
+            return '7.0pt', '1.12'
+        elif length > 48:
+            return '7.8pt', '1.15'
+        else:
+            return '8.5pt', '1.20'
+    elif layout == '16':
+        if length > 80:
+            return '4.6pt', '1.05'
+        elif length > 60:
+            return '5.2pt', '1.08'
+        elif length > 40:
+            return '5.8pt', '1.12'
+        else:
+            return '6.6pt', '1.18'
+    else:  # default '12'
+        if length > 80:
+            return '5.2pt', '1.06'
+        elif length > 60:
+            return '6.0pt', '1.10'
+        elif length > 40:
+            return '6.8pt', '1.15'
+        else:
+            return '7.5pt', '1.20'
+
 def predict_gender(name: str, relative_name: str = '') -> str:
     """
     Infers gender (पुरूष / स्त्री) based on relationship and common Hindi name patterns.
@@ -728,12 +787,14 @@ body {{
 .booth-row {{
     font-size: {f_booth};
     line-height: 1.2;
-    max-height: {booth_height};
+    min-height: 20px;
+    max-height: 38px;
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     text-overflow: ellipsis;
+    word-break: break-word;
 }}
 .voting-time-box {{
     border: 1px solid #222;
@@ -782,6 +843,9 @@ body {{
                 gender = v.get('gender', '')
                 house = v.get('house', '00')
                 booth = v.get('booth_address', '')
+                clean_booth = format_booth_text(booth)
+                booth_display = f"मतदान केंद्र - {clean_booth}" if clean_booth else "मतदान केंद्र - "
+                booth_f_sz, booth_lh = get_booth_style(booth_display, layout_type)
                 jp = v.get('jila_parishad') or jila_parishad or ''
                 ps = v.get('panchayat_samiti') or panchayat_samiti or ''
 
@@ -811,8 +875,8 @@ body {{
                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%;">पिता/पति <span class="bold-txt">{rel}</span></div>
                 <div style="white-space: nowrap;">मकानसं <span class="bold-txt">{house}</span></div>
             </div>
-            <div class="booth-row">
-                मतदान केंद्र - {booth}
+            <div class="booth-row" style="font-size: {booth_f_sz}; line-height: {booth_lh};">
+                {booth_display}
             </div>
             <div class="voting-time-box">
                 मतदान समय : {voting_time}
