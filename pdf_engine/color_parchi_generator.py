@@ -995,20 +995,50 @@ body {{
     html += """</body></html>"""
     return html, total_pages, total_voters
 
+def _save_data_url_to_file(data_url: Optional[str], target_base_path: str) -> Optional[str]:
+    """Decodes data URL and writes to disk, returning relative filename or None."""
+    if not data_url or not isinstance(data_url, str):
+        return None
+    data_url = data_url.strip()
+    if not data_url.startswith('data:'):
+        return None
+    try:
+        header, content = data_url.split(',', 1)
+        if ';base64' in header:
+            raw = base64.b64decode(content)
+        else:
+            import urllib.parse
+            raw = urllib.parse.unquote(content).encode('utf-8')
+        
+        ext = '.png'
+        if 'svg' in header:
+            ext = '.svg'
+        elif 'jpeg' in header or 'jpg' in header:
+            ext = '.jpg'
+        elif 'webp' in header:
+            ext = '.webp'
+            
+        filepath = f"{target_base_path}{ext}"
+        with open(filepath, 'wb') as f:
+            f.write(raw)
+        return os.path.basename(filepath)
+    except Exception:
+        return None
+
 def _run_browser_print_to_pdf(browser_bin: str, html_file: str, pdf_file: str, timeout: int = 120) -> None:
-    """Executes headless Chrome or Edge to render HTML to PDF."""
+    """Executes headless Chrome or Edge to render HTML to PDF at maximum speed."""
     cmd_new = [
         browser_bin,
         "--headless=new",
         "--disable-gpu",
         "--no-sandbox",
         "--disable-dev-shm-usage",
-        "--run-all-compositor-stages-before-draw",
         "--no-pdf-header-footer",
-        "--disable-software-rasterizer",
-        "--hide-scrollbars",
         "--disable-extensions",
         "--disable-background-networking",
+        "--disable-sync",
+        "--no-first-run",
+        "--disable-default-apps",
         "--mute-audio",
         f"--print-to-pdf={pdf_file}",
         html_file
@@ -1027,8 +1057,10 @@ def _run_browser_print_to_pdf(browser_bin: str, html_file: str, pdf_file: str, t
         "--disable-gpu",
         "--no-sandbox",
         "--disable-dev-shm-usage",
-        f"--print-to-pdf={pdf_file}",
         "--no-pdf-header-footer",
+        "--disable-extensions",
+        "--disable-background-networking",
+        f"--print-to-pdf={pdf_file}",
         html_file
     ]
     res2 = subprocess.run(cmd_legacy, capture_output=True, text=True, timeout=timeout)
@@ -1079,8 +1111,8 @@ def generate_color_parchi_pdf(
     all_page_chunks = chunk_voters_by_ward(filtered, cards_per_page)
     total_pages = len(all_page_chunks)
 
-    # Chunking strategy: 25 pages per batch
-    PAGE_BATCH = 25
+    # Chunking strategy: 100 pages per batch for maximum speed
+    PAGE_BATCH = 100
     if total_pages <= PAGE_BATCH:
         page_batches = [all_page_chunks]
     else:
@@ -1091,6 +1123,27 @@ def generate_color_parchi_pdf(
     total_rendered_pages = 0
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        cand_info_copy = dict(candidate_info or {})
+
+        # Optimize candidate photo, symbol, and poster images into disk files once
+        cand_photo_data = cand_info_copy.get('candidate_photo_data') or DEFAULT_CANDIDATE_DATA
+        cand_file = _save_data_url_to_file(cand_photo_data, os.path.join(tmpdir, "cand_photo"))
+        if cand_file:
+            cand_info_copy['candidate_photo_data'] = cand_file
+
+        sym_key = cand_info_copy.get('symbol_preset', 'hand')
+        sym_data = cand_info_copy.get('custom_symbol_data') or cand_info_copy.get('symbol_img_data') or SYMBOL_PRESETS.get(sym_key, DEFAULT_HAND_DATA)
+        sym_file = _save_data_url_to_file(sym_data, os.path.join(tmpdir, "sym_photo"))
+        if sym_file:
+            cand_info_copy['custom_symbol_data'] = sym_file
+            cand_info_copy['symbol_img_data'] = sym_file
+
+        poster_data = cand_info_copy.get('poster_img_data')
+        if poster_data:
+            post_file = _save_data_url_to_file(poster_data, os.path.join(tmpdir, "poster_photo"))
+            if post_file:
+                cand_info_copy['poster_img_data'] = post_file
+
         for idx, batch_chunks in enumerate(page_batches, 1):
             if progress_callback:
                 try:
@@ -1107,7 +1160,7 @@ def generate_color_parchi_pdf(
 
             html_content, chunk_pages, _ = generate_color_parchi_html(
                 voters=filtered,
-                candidate_info=candidate_info,
+                candidate_info=cand_info_copy,
                 layout_type=layout_type,
                 show_page_number=show_page_number,
                 filter_active_only=False,  # Already filtered

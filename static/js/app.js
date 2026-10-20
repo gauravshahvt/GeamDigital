@@ -1351,6 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalHtml = parchiDownloadPdfBtn.innerHTML;
             parchiDownloadPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रही है...</span>';
             if (window.lucide) lucide.createIcons();
+            setParchiLoading(true, 'मतदाता पर्ची PDF तैयार की जा रही है... तैयार होते ही ऑटो डाउनलोड प्रारंभ होगा');
 
             const layoutType = parchiLayoutTypeSelect ? parchiLayoutTypeSelect.value : '12';
             const showPageNum = parchiShowPageNumCheck ? parchiShowPageNumCheck.checked : true;
@@ -1383,6 +1384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (contentType.includes('application/json')) {
                     const data = await response.json();
                     if (data.fallback_print && data.print_url) {
+                        setParchiLoading(false);
                         window.open(data.print_url, '_blank');
                         return;
                     }
@@ -1404,9 +1406,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 a.download = `Geam_Digital_${safeName}_A4_${layoutType}_Parchi.pdf`;
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+
+                setParchiLoading(true, '✅ PDF तैयार! ऑटो डाउनलोड प्रारंभ हो गया है...');
+                setTimeout(() => {
+                    setParchiLoading(false);
+                    window.URL.revokeObjectURL(url);
+                    if (a.parentNode) document.body.removeChild(a);
+                }, 1500);
             } catch (err) {
+                setParchiLoading(false);
                 if (err.message && (err.message.includes('headless Chrome') || err.message.includes('browser found') || err.message.includes('Edge browser'))) {
                     window.open(fallbackPrintUrl, '_blank');
                 } else {
@@ -2351,6 +2359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalHtml = colorDownloadPdfBtn.innerHTML;
             colorDownloadPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>कलर PDF जनरेट हो रही है...</span>';
             if (window.lucide) lucide.createIcons();
+            setColorLoading(true, 'कलर पर्ची PDF तैयार की जा रही है... तैयार होते ही ऑटो डाउनलोड प्रारंभ होगा');
 
             const layoutType = colorLayoutTypeSelect ? colorLayoutTypeSelect.value : '8';
             const showPageNum = colorShowPageNumCheck ? colorShowPageNumCheck.checked : true;
@@ -2379,6 +2388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (contentType.includes('application/json')) {
                     const data = await response.json();
                     if (data.fallback_print && data.print_url) {
+                        setColorLoading(false);
                         window.open(data.print_url, '_blank');
                         return;
                     }
@@ -2400,9 +2410,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 a.download = `Geam_Digital_${safeName}_A4_${layoutType}_Color_Parchi.pdf`;
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+
+                setColorLoading(true, '✅ PDF तैयार! ऑटो डाउनलोड प्रारंभ हो गया है...');
+                setTimeout(() => {
+                    setColorLoading(false);
+                    window.URL.revokeObjectURL(url);
+                    if (a.parentNode) document.body.removeChild(a);
+                }, 1500);
             } catch (err) {
+                setColorLoading(false);
                 if (err.message && (err.message.includes('headless Chrome') || err.message.includes('browser found') || err.message.includes('Edge browser'))) {
                     window.open(fallbackPrintUrl, '_blank');
                 } else {

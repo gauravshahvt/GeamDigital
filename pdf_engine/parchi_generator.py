@@ -48,19 +48,19 @@ def get_browser_executable() -> Optional[str]:
     return None
 
 def _run_browser_print_to_pdf(browser_bin: str, html_file: str, pdf_file: str, timeout: int = 120) -> None:
-    """Executes headless Chrome or Edge to render HTML to PDF."""
+    """Executes headless Chrome or Edge to render HTML to PDF at maximum speed."""
     cmd_new = [
         browser_bin,
         "--headless=new",
         "--disable-gpu",
         "--no-sandbox",
         "--disable-dev-shm-usage",
-        "--run-all-compositor-stages-before-draw",
         "--no-pdf-header-footer",
-        "--disable-software-rasterizer",
-        "--hide-scrollbars",
         "--disable-extensions",
         "--disable-background-networking",
+        "--disable-sync",
+        "--no-first-run",
+        "--disable-default-apps",
         "--mute-audio",
         f"--print-to-pdf={pdf_file}",
         html_file
@@ -969,7 +969,7 @@ def generate_parchi_pdf(
     all_page_chunks = chunk_voters_by_ward(filtered, cards_per_page)
     total_pages = len(all_page_chunks)
 
-    PAGE_BATCH = 25
+    PAGE_BATCH = 100
     if total_pages <= PAGE_BATCH:
         page_batches = [all_page_chunks]
     else:

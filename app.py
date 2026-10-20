@@ -1226,6 +1226,26 @@ def api_color_parchi_upload_asset():
             
         mimetype = f.mimetype or 'image/jpeg'
         img_bytes = f.read()
+
+        # Optimize resolution for fast slip rendering without quality loss
+        try:
+            from PIL import Image
+            pil_img = Image.open(BytesIO(img_bytes))
+            if pil_img.width > 600 or pil_img.height > 600:
+                pil_img.thumbnail((600, 600), Image.Resampling.LANCZOS)
+            out = BytesIO()
+            if pil_img.mode in ('RGBA', 'LA') or (pil_img.mode == 'P' and 'transparency' in pil_img.info):
+                pil_img.save(out, format='PNG', optimize=True)
+                mimetype = 'image/png'
+            else:
+                if pil_img.mode != 'RGB':
+                    pil_img = pil_img.convert('RGB')
+                pil_img.save(out, format='JPEG', quality=85, optimize=True)
+                mimetype = 'image/jpeg'
+            img_bytes = out.getvalue()
+        except Exception:
+            pass
+
         encoded = base64.b64encode(img_bytes).decode('ascii')
         data_url = f"data:{mimetype};base64,{encoded}"
 
