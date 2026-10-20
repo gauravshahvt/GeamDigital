@@ -4,6 +4,7 @@ import json
 import re
 import base64
 import threading
+import urllib.parse
 from typing import Optional, Any
 from flask import Flask, request, jsonify, render_template, send_file, send_from_directory
 from werkzeug.utils import secure_filename
@@ -30,7 +31,8 @@ from pdf_engine.parchi_generator import (
     generate_parchi_html,
     generate_parchi_pdf,
     predict_gender,
-    clean_val_str
+    clean_val_str,
+    get_browser_executable
 )
 from pdf_engine.color_parchi_generator import (
     generate_color_parchi_html,
@@ -85,6 +87,59 @@ FAMILY_CACHE = {}
 AGE_CACHE = {}
 UPLOAD_TASKS = {}
 DISTRICT_TASKS = {}
+
+def wrap_print_html(html: str) -> str:
+    """Injects a non-printable guidance header and auto-print script into rendered HTML."""
+    banner_and_style = """
+    <style>
+        @media print {
+            .no-print, .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+    <div class="no-print" style="position: sticky; top: 0; left: 0; right: 0; z-index: 999999; background: #0f172a; color: #f8fafc; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 14px rgba(0,0,0,0.25); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 18px;">📄</span>
+            <span><b>PDF के रूप में सहेजें (Save as PDF):</b> प्रिंट विंडो में 'Destination' में <b>'Save as PDF'</b> चुनें।</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.print()" style="background: #2563eb; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.4);">
+                🖨️ प्रिंट / Save as PDF
+            </button>
+            <button onclick="window.close()" style="background: #334155; color: #cbd5e1; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer;">
+                ✕ बंद करें
+            </button>
+        </div>
+    </div>
+    """
+    auto_print_script = """
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                window.print();
+            }, 600);
+        });
+    </script>
+    """
+    if '<body' in html:
+        idx = html.find('>', html.find('<body'))
+        if idx != -1:
+            html = html[:idx+1] + banner_and_style + html[idx+1:]
+        else:
+            html = banner_and_style + html
+    else:
+        html = banner_and_style + html
+
+    if '</body>' in html:
+        html = html.replace('</body>', f'{auto_print_script}</body>')
+    else:
+        html = html + auto_print_script
+    return html
 
 def choose_folder_gui() -> str:
     """Tries to show a native Windows Browse Folder dialog."""
@@ -832,9 +887,6 @@ def api_parchi_export_pdf():
         range_from = data.get('range_from')
         range_to = data.get('range_to')
         
-        if not session_id or session_id not in PARCHI_CACHE:
-            return jsonify({'error': 'सत्र समाप्त हो गया है। कृपया पुनः फ़ाइल चुनें।'}), 404
-            
         voters = PARCHI_CACHE[session_id]['parsed']['voters']
         
         # Custom booth if provided
@@ -846,6 +898,32 @@ def api_parchi_export_pdf():
                     
         jp = data.get('jila_parishad') or PARCHI_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         ps = data.get('panchayat_samiti') or PARCHI_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
+
+        # Build fallback print URL for serverless / cloud environments
+        print_params = {
+            'session_id': session_id,
+            'panchayat_name': panchayat_name,
+            'voting_time': voting_time,
+            'filter_active_only': str(filter_active_only).lower(),
+            'layout_type': layout_type,
+            'show_page_number': str(show_page_number).lower(),
+            'jila_parishad': jp,
+            'panchayat_samiti': ps
+        }
+        if custom_booth:
+            print_params['booth_address'] = custom_booth
+        if range_from:
+            print_params['range_from'] = range_from
+        if range_to:
+            print_params['range_to'] = range_to
+        fallback_print_url = f"/parchi/print?{urllib.parse.urlencode(print_params)}"
+
+        if not get_browser_executable():
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url,
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
 
         pdf_bytes = generate_parchi_pdf(
             voters=voters,
@@ -878,6 +956,12 @@ def api_parchi_export_pdf():
             mimetype='application/pdf'
         )
     except Exception as e:
+        if any(k in str(e).lower() for k in ["headless chrome", "edge browser", "browser found"]):
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url if 'fallback_print_url' in locals() else f"/parchi/print?session_id={session_id}",
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
         return jsonify({'error': str(e)}), 500
 
 @app.route('/parchi/print', methods=['GET', 'POST'])
@@ -922,17 +1006,7 @@ def parchi_print_standalone():
             panchayat_samiti=ps
         )
         
-        auto_print_script = """
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => {
-                    window.print();
-                }, 500);
-            });
-        </script>
-        """
-        html_with_print = html.replace('</body>', f'{auto_print_script}</body>')
-        return html_with_print
+        return wrap_print_html(html)
     except Exception as e:
         return f"<h3>त्रुटि: {str(e)}</h3>", 500
 
@@ -1242,6 +1316,28 @@ def api_color_parchi_export_pdf():
         except (ValueError, TypeError):
             range_to = None
 
+        # Build fallback print URL for serverless / cloud environments
+        print_params = {
+            'session_id': session_id,
+            'layout_type': layout_type,
+            'show_page_number': str(show_page_number).lower(),
+            'filter_active_only': str(filter_active_only).lower(),
+            'jila_parishad': candidate_info.get('jila_parishad', ''),
+            'panchayat_samiti': candidate_info.get('panchayat_samiti', '')
+        }
+        if range_from:
+            print_params['range_from'] = range_from
+        if range_to:
+            print_params['range_to'] = range_to
+        fallback_print_url = f"/color_parchi/print?{urllib.parse.urlencode(print_params)}"
+
+        if not get_browser_executable():
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url,
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
+
         pdf_bytes = generate_color_parchi_pdf(
             voters=voters,
             candidate_info=candidate_info,
@@ -1270,6 +1366,12 @@ def api_color_parchi_export_pdf():
             mimetype='application/pdf'
         )
     except Exception as e:
+        if any(k in str(e).lower() for k in ["headless chrome", "edge browser", "browser found"]):
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url if 'fallback_print_url' in locals() else f"/color_parchi/print?session_id={session_id}",
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
         return jsonify({'error': str(e)}), 500
 
 @app.route('/color_parchi/print', methods=['GET', 'POST'])
@@ -1322,17 +1424,7 @@ def color_parchi_print_standalone():
             for_preview=False
         )
         
-        auto_print_script = """
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => {
-                    window.print();
-                }, 500);
-            });
-        </script>
-        """
-        html_with_print = html.replace('</body>', f'{auto_print_script}</body>')
-        return html_with_print
+        return wrap_print_html(html)
     except Exception as e:
         return f"<h3>त्रुटि: {str(e)}</h3>", 500
 
@@ -1651,7 +1743,28 @@ def api_alpha_export_pdf():
         
         jp = data.get('jila_parishad') or ALPHA_CACHE[session_id].get('config', {}).get('jila_parishad') or ALPHA_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         ps = data.get('panchayat_samiti') or ALPHA_CACHE[session_id].get('config', {}).get('panchayat_samiti') or ALPHA_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
-        
+
+        # Build fallback print URL for serverless / cloud environments
+        print_params = {
+            'session_id': session_id,
+            'ward_title': ward_title,
+            'part_no': part_no,
+            'booth_address': booth_address,
+            'list_title': list_title,
+            'selected_ward': selected_ward,
+            'filter_active_only': str(filter_active_only).lower(),
+            'jila_parishad': jp,
+            'panchayat_samiti': ps
+        }
+        fallback_print_url = f"/alphabetical/print?{urllib.parse.urlencode(print_params)}"
+
+        if not get_browser_executable():
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url,
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
+
         pdf_bytes = generate_alphabetical_pdf(
             voters=voters,
             ward_title=ward_title,
@@ -1682,6 +1795,12 @@ def api_alpha_export_pdf():
             mimetype='application/pdf'
         )
     except Exception as e:
+        if any(k in str(e).lower() for k in ["headless chrome", "edge browser", "browser found"]):
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url if 'fallback_print_url' in locals() else f"/alphabetical/print?session_id={session_id}",
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/alphabetical/export_excel', methods=['POST'])
@@ -1786,17 +1905,7 @@ def alpha_print_standalone():
             panchayat_samiti=ps
         )
         
-        auto_print_script = """
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => {
-                    window.print();
-                }, 500);
-            });
-        </script>
-        """
-        html_with_print = html.replace('</body>', f'{auto_print_script}</body>')
-        return html_with_print
+        return wrap_print_html(html)
     except Exception as e:
         return f"<h3>त्रुटि: {str(e)}</h3>", 500
 
@@ -2125,7 +2234,30 @@ def api_family_export_pdf():
         
         jp = data.get('jila_parishad') or FAMILY_CACHE[session_id].get('config', {}).get('jila_parishad') or FAMILY_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         ps = data.get('panchayat_samiti') or FAMILY_CACHE[session_id].get('config', {}).get('panchayat_samiti') or FAMILY_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
-        
+
+        # Build fallback print URL for serverless / cloud environments
+        print_params = {
+            'session_id': session_id,
+            'ward_title': ward_title,
+            'part_no': part_no,
+            'booth_address': booth_address,
+            'list_title': list_title,
+            'selected_ward': selected_ward,
+            'min_family_size': min_family_size,
+            'ignore_zero_houses': str(ignore_zero).lower(),
+            'filter_active_only': str(filter_active_only).lower(),
+            'jila_parishad': jp,
+            'panchayat_samiti': ps
+        }
+        fallback_print_url = f"/family/print?{urllib.parse.urlencode(print_params)}"
+
+        if not get_browser_executable():
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url,
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
+
         pdf_bytes = generate_family_pdf(
             voters=voters,
             ward_title=ward_title,
@@ -2158,6 +2290,12 @@ def api_family_export_pdf():
             mimetype='application/pdf'
         )
     except Exception as e:
+        if any(k in str(e).lower() for k in ["headless chrome", "edge browser", "browser found"]):
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url if 'fallback_print_url' in locals() else f"/family/print?session_id={session_id}",
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/family/export_excel', methods=['POST'])
@@ -2274,17 +2412,7 @@ def family_print_standalone():
             panchayat_samiti=ps
         )
         
-        auto_print_script = """
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => {
-                    window.print();
-                }, 500);
-            });
-        </script>
-        """
-        html_with_print = html.replace('</body>', f'{auto_print_script}</body>')
-        return html_with_print
+        return wrap_print_html(html)
     except Exception as e:
         return f"<h3>त्रुटि: {str(e)}</h3>", 500
 
@@ -2609,7 +2737,31 @@ def api_age_export_pdf():
         
         jp = data.get('jila_parishad') or AGE_CACHE[session_id].get('config', {}).get('jila_parishad') or AGE_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         ps = data.get('panchayat_samiti') or AGE_CACHE[session_id].get('config', {}).get('panchayat_samiti') or AGE_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
-        
+
+        # Build fallback print URL for serverless / cloud environments
+        print_params = {
+            'session_id': session_id,
+            'ward_title': ward_title,
+            'booth_address': booth_address,
+            'list_title': list_title,
+            'list_type': list_type,
+            'min_age': min_age if min_age is not None else '',
+            'max_age': max_age if max_age is not None else '',
+            'sort_order': sort_order if sort_order is not None else '',
+            'selected_ward': selected_ward,
+            'filter_active_only': str(filter_active_only).lower(),
+            'jila_parishad': jp,
+            'panchayat_samiti': ps
+        }
+        fallback_print_url = f"/age_list/print?{urllib.parse.urlencode(print_params)}"
+
+        if not get_browser_executable():
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url,
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
+
         pdf_bytes = generate_age_pdf(
             voters=voters,
             ward_title=ward_title,
@@ -2644,6 +2796,12 @@ def api_age_export_pdf():
             mimetype='application/pdf'
         )
     except Exception as e:
+        if any(k in str(e).lower() for k in ["headless chrome", "edge browser", "browser found"]):
+            return jsonify({
+                'fallback_print': True,
+                'print_url': fallback_print_url if 'fallback_print_url' in locals() else f"/age_list/print?session_id={session_id}",
+                'message': 'क्लाउड सर्वर पर हेडलेस क्रोम उपलब्ध नहीं होने के कारण प्रिंट विंडो खोली जा रही है। कृपया "Save as PDF" चुनें।'
+            }), 200
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/age_list/export_excel', methods=['POST'])
@@ -2782,17 +2940,7 @@ def age_print_standalone():
             panchayat_samiti=ps
         )
         
-        auto_print_script = """
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => {
-                    window.print();
-                }, 500);
-            });
-        </script>
-        """
-        html_with_print = html.replace('</body>', f'{auto_print_script}</body>')
-        return html_with_print
+        return wrap_print_html(html)
     except Exception as e:
         return f"<h3>त्रुटि: {str(e)}</h3>", 500
 

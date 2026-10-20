@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from collections import OrderedDict
@@ -9,17 +10,41 @@ import openpyxl
 import pymupdf
 
 CHROME_PATHS = [
+    # Windows paths
     r'C:\Program Files\Google\Chrome\Application\chrome.exe',
     r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-    r'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
+    r'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
+    # Linux paths
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
+    # macOS paths
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
 ]
 
 def get_browser_executable() -> Optional[str]:
     """Finds installed Google Chrome or Microsoft Edge executable for PDF rendering."""
+    # 1. Environment variables
+    for env_var in ['CHROME_BIN', 'CHROMIUM_PATH', 'PUPPETEER_EXECUTABLE_PATH']:
+        val = os.environ.get(env_var)
+        if val and os.path.exists(val):
+            return val
+
+    # 2. PATH lookups
+    for bin_name in ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'msedge', 'chrome']:
+        found = shutil.which(bin_name)
+        if found and os.path.exists(found):
+            return found
+
+    # 3. Known absolute locations
     for p in CHROME_PATHS:
         if os.path.exists(p):
             return p
+
     return None
 
 def _run_browser_print_to_pdf(browser_bin: str, html_file: str, pdf_file: str, timeout: int = 120) -> None:

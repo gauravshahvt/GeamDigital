@@ -1352,12 +1352,16 @@ document.addEventListener('DOMContentLoaded', () => {
             parchiDownloadPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रही है...</span>';
             if (window.lucide) lucide.createIcons();
 
-            try {
-                const layoutType = parchiLayoutTypeSelect ? parchiLayoutTypeSelect.value : '12';
-                const showPageNum = parchiShowPageNumCheck ? parchiShowPageNumCheck.checked : true;
-                const jp = parchiJilaParishadInput ? parchiJilaParishadInput.value.trim() : (parchiState.jilaParishad || '');
-                const ps = parchiPanchayatSamitiInput ? parchiPanchayatSamitiInput.value.trim() : (parchiState.panchayatSamiti || '');
+            const layoutType = parchiLayoutTypeSelect ? parchiLayoutTypeSelect.value : '12';
+            const showPageNum = parchiShowPageNumCheck ? parchiShowPageNumCheck.checked : true;
+            const jp = parchiJilaParishadInput ? parchiJilaParishadInput.value.trim() : (parchiState.jilaParishad || '');
+            const ps = parchiPanchayatSamitiInput ? parchiPanchayatSamitiInput.value.trim() : (parchiState.panchayatSamiti || '');
+            const pName = encodeURIComponent(parchiPanchayatInput ? parchiPanchayatInput.value.trim() || 'ग्राम पंचायत' : 'ग्राम पंचायत');
+            const vTime = encodeURIComponent(parchiVotingTimeInput ? parchiVotingTimeInput.value.trim() || 'प्रातः 7 से सायं 6 बजे तक' : 'प्रातः 7 से सायं 6 बजे तक');
+            const actOnly = parchiActiveOnlyCheck ? parchiActiveOnlyCheck.checked : true;
+            const fallbackPrintUrl = `/parchi/print?session_id=${parchiState.sessionId}&panchayat_name=${pName}&voting_time=${vTime}&filter_active_only=${actOnly}&layout_type=${layoutType}&show_page_number=${showPageNum}&jila_parishad=${encodeURIComponent(jp)}&panchayat_samiti=${encodeURIComponent(ps)}`;
 
+            try {
                 const payload = {
                     session_id: parchiState.sessionId,
                     panchayat_name: parchiPanchayatInput ? parchiPanchayatInput.value.trim() || 'ग्राम पंचायत' : 'ग्राम पंचायत',
@@ -1375,9 +1379,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
 
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data.fallback_print && data.print_url) {
+                        window.open(data.print_url, '_blank');
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+                }
+
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'PDF डाउनलोड विफल');
+                    throw new Error('PDF डाउनलोड विफल (' + response.status + ')');
                 }
 
                 const blob = await response.blob();
@@ -1392,7 +1407,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } catch (err) {
-                alert('PDF निर्यात त्रुटि: ' + err.message);
+                if (err.message && (err.message.includes('headless Chrome') || err.message.includes('browser found') || err.message.includes('Edge browser'))) {
+                    window.open(fallbackPrintUrl, '_blank');
+                } else {
+                    alert('PDF निर्यात त्रुटि: ' + err.message);
+                }
             } finally {
                 parchiDownloadPdfBtn.disabled = false;
                 parchiDownloadPdfBtn.innerHTML = originalHtml;
@@ -2333,14 +2352,18 @@ document.addEventListener('DOMContentLoaded', () => {
             colorDownloadPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>कलर PDF जनरेट हो रही है...</span>';
             if (window.lucide) lucide.createIcons();
 
-            try {
-                const layoutType = colorLayoutTypeSelect ? colorLayoutTypeSelect.value : '8';
-                const showPageNum = colorShowPageNumCheck ? colorShowPageNumCheck.checked : true;
-                const filterActive = colorActiveOnlyCheck ? colorActiveOnlyCheck.checked : true;
+            const layoutType = colorLayoutTypeSelect ? colorLayoutTypeSelect.value : '8';
+            const showPageNum = colorShowPageNumCheck ? colorShowPageNumCheck.checked : true;
+            const filterActive = colorActiveOnlyCheck ? colorActiveOnlyCheck.checked : true;
+            const cand = gatherCandidateInfo();
+            const jp = encodeURIComponent(cand.jila_parishad || '');
+            const ps = encodeURIComponent(cand.panchayat_samiti || '');
+            const fallbackPrintUrl = `/color_parchi/print?session_id=${colorState.sessionId}&layout_type=${layoutType}&show_page_number=${showPageNum}&filter_active_only=${filterActive}&jila_parishad=${jp}&panchayat_samiti=${ps}`;
 
+            try {
                 const payload = {
                     session_id: colorState.sessionId,
-                    candidate_info: gatherCandidateInfo(),
+                    candidate_info: cand,
                     layout_type: layoutType,
                     show_page_number: showPageNum,
                     filter_active_only: filterActive
@@ -2352,9 +2375,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
 
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data.fallback_print && data.print_url) {
+                        window.open(data.print_url, '_blank');
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+                }
+
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'PDF डाउनलोड विफल');
+                    throw new Error('PDF डाउनलोड विफल (' + response.status + ')');
                 }
 
                 const blob = await response.blob();
@@ -2369,7 +2403,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } catch (err) {
-                alert('PDF निर्यात त्रुटि: ' + err.message);
+                if (err.message && (err.message.includes('headless Chrome') || err.message.includes('browser found') || err.message.includes('Edge browser'))) {
+                    window.open(fallbackPrintUrl, '_blank');
+                } else {
+                    alert('PDF निर्यात त्रुटि: ' + err.message);
+                }
             } finally {
                 colorDownloadPdfBtn.disabled = false;
                 colorDownloadPdfBtn.innerHTML = originalHtml;
@@ -2852,16 +2890,17 @@ document.addEventListener('DOMContentLoaded', () => {
             alphaDownloadPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रही है...</span>';
             if (window.lucide) lucide.createIcons();
 
-            try {
-                const wardTitle = alphaPanchayatInput ? alphaPanchayatInput.value.trim() : 'ग्राम पंचायत';
-                const listTitle = alphaListTitleInput ? alphaListTitleInput.value.trim() : 'अल्फाबेटिक ABCD से वोटर लिस्ट';
-                const selWard = alphaWardSelect ? alphaWardSelect.value : 'all';
-                const partNo = selWard !== 'all' ? selWard : '';
-                const boothAddr = alphaBoothInput ? alphaBoothInput.value.trim() : '';
-                const filterActive = alphaActiveOnlyCheck ? alphaActiveOnlyCheck.checked : true;
-                const jp = alphaJilaParishadInput ? alphaJilaParishadInput.value.trim() : (alphaState.jilaParishad || '');
-                const ps = alphaPanchayatSamitiInput ? alphaPanchayatSamitiInput.value.trim() : (alphaState.panchayatSamiti || '');
+            const wardTitle = alphaPanchayatInput ? alphaPanchayatInput.value.trim() : 'ग्राम पंचायत';
+            const listTitle = alphaListTitleInput ? alphaListTitleInput.value.trim() : 'अल्फाबेटिक ABCD से वोटर लिस्ट';
+            const selWard = alphaWardSelect ? alphaWardSelect.value : 'all';
+            const partNo = selWard !== 'all' ? selWard : '';
+            const boothAddr = alphaBoothInput ? alphaBoothInput.value.trim() : '';
+            const filterActive = alphaActiveOnlyCheck ? alphaActiveOnlyCheck.checked : true;
+            const jp = alphaJilaParishadInput ? alphaJilaParishadInput.value.trim() : (alphaState.jilaParishad || '');
+            const ps = alphaPanchayatSamitiInput ? alphaPanchayatSamitiInput.value.trim() : (alphaState.panchayatSamiti || '');
+            const fallbackPrintUrl = `/alphabetical/print?session_id=${alphaState.sessionId}&ward_title=${encodeURIComponent(wardTitle)}&list_title=${encodeURIComponent(listTitle)}&part_no=${encodeURIComponent(partNo)}&booth_address=${encodeURIComponent(boothAddr)}&selected_ward=${encodeURIComponent(selWard)}&filter_active_only=${filterActive}&jila_parishad=${encodeURIComponent(jp)}&panchayat_samiti=${encodeURIComponent(ps)}`;
 
+            try {
                 const payload = {
                     session_id: alphaState.sessionId,
                     ward_title: wardTitle,
@@ -2880,9 +2919,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
 
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data.fallback_print && data.print_url) {
+                        window.open(data.print_url, '_blank');
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+                }
+
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'PDF डाउनलोड विफल');
+                    throw new Error('PDF डाउनलोड विफल (' + response.status + ')');
                 }
 
                 const blob = await response.blob();
@@ -2897,7 +2947,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } catch (err) {
-                alert('PDF निर्यात त्रुटि: ' + err.message);
+                if (err.message && (err.message.includes('headless Chrome') || err.message.includes('browser found') || err.message.includes('Edge browser'))) {
+                    window.open(fallbackPrintUrl, '_blank');
+                } else {
+                    alert('PDF निर्यात त्रुटि: ' + err.message);
+                }
             } finally {
                 alphaDownloadPdfBtn.disabled = false;
                 alphaDownloadPdfBtn.innerHTML = originalHtml;
@@ -3445,18 +3499,19 @@ document.addEventListener('DOMContentLoaded', () => {
             familyDownloadPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रही है...</span>';
             if (window.lucide) lucide.createIcons();
 
-            try {
-                const wardTitle = familyPanchayatInput ? familyPanchayatInput.value.trim() : 'ग्राम पंचायत';
-                const listTitle = familyListTitleInput ? familyListTitleInput.value.trim() : 'बड़े-घर की लिस्ट';
-                const selWard = familyWardSelect ? familyWardSelect.value : 'all';
-                const partNo = selWard !== 'all' ? selWard : '';
-                const boothAddr = familyBoothInput ? familyBoothInput.value.trim() : '';
-                const minSize = familyMinSizeSelect ? parseInt(familyMinSizeSelect.value) : 2;
-                const ignoreZero = familyIgnoreZeroCheck ? familyIgnoreZeroCheck.checked : true;
-                const filterActive = familyActiveOnlyCheck ? familyActiveOnlyCheck.checked : true;
-                const jp = familyJilaParishadInput ? familyJilaParishadInput.value.trim() : (familyState.jilaParishad || '');
-                const ps = familyPanchayatSamitiInput ? familyPanchayatSamitiInput.value.trim() : (familyState.panchayatSamiti || '');
+            const wardTitle = familyPanchayatInput ? familyPanchayatInput.value.trim() : 'ग्राम पंचायत';
+            const listTitle = familyListTitleInput ? familyListTitleInput.value.trim() : 'बड़े-घर की लिस्ट';
+            const selWard = familyWardSelect ? familyWardSelect.value : 'all';
+            const partNo = selWard !== 'all' ? selWard : '';
+            const boothAddr = familyBoothInput ? familyBoothInput.value.trim() : '';
+            const minSize = familyMinSizeSelect ? parseInt(familyMinSizeSelect.value) : 2;
+            const ignoreZero = familyIgnoreZeroCheck ? familyIgnoreZeroCheck.checked : true;
+            const filterActive = familyActiveOnlyCheck ? familyActiveOnlyCheck.checked : true;
+            const jp = familyJilaParishadInput ? familyJilaParishadInput.value.trim() : (familyState.jilaParishad || '');
+            const ps = familyPanchayatSamitiInput ? familyPanchayatSamitiInput.value.trim() : (familyState.panchayatSamiti || '');
+            const fallbackPrintUrl = `/family/print?session_id=${familyState.sessionId}&ward_title=${encodeURIComponent(wardTitle)}&list_title=${encodeURIComponent(listTitle)}&part_no=${encodeURIComponent(partNo)}&booth_address=${encodeURIComponent(boothAddr)}&selected_ward=${encodeURIComponent(selWard)}&min_family_size=${minSize}&ignore_zero_houses=${ignoreZero}&filter_active_only=${filterActive}&jila_parishad=${encodeURIComponent(jp)}&panchayat_samiti=${encodeURIComponent(ps)}`;
 
+            try {
                 const payload = {
                     session_id: familyState.sessionId,
                     ward_title: wardTitle,
@@ -3477,9 +3532,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
 
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data.fallback_print && data.print_url) {
+                        window.open(data.print_url, '_blank');
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+                }
+
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'PDF डाउनलोड विफल');
+                    throw new Error('PDF डाउनलोड विफल (' + response.status + ')');
                 }
 
                 const blob = await response.blob();
@@ -3494,7 +3560,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } catch (err) {
-                alert('PDF निर्यात त्रुटि: ' + err.message);
+                if (err.message && (err.message.includes('headless Chrome') || err.message.includes('browser found') || err.message.includes('Edge browser'))) {
+                    window.open(fallbackPrintUrl, '_blank');
+                } else {
+                    alert('PDF निर्यात त्रुटि: ' + err.message);
+                }
             } finally {
                 familyDownloadPdfBtn.disabled = false;
                 familyDownloadPdfBtn.innerHTML = originalHtml;
@@ -4129,15 +4199,16 @@ document.addEventListener('DOMContentLoaded', () => {
             ageDownloadPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रही है...</span>';
             if (window.lucide) lucide.createIcons();
 
-            try {
-                const wardTitle = agePanchayatInput ? agePanchayatInput.value.trim() : 'ग्राम पंचायत';
-                const listTitle = ageListTitleInput ? ageListTitleInput.value.trim() : '';
-                const boothAddr = ageBoothInput ? ageBoothInput.value.trim() : '';
-                const selWard = ageWardSelect ? ageWardSelect.value : 'all';
-                const filterActive = ageActiveOnlyCheck ? ageActiveOnlyCheck.checked : true;
-                const jp = ageJilaParishadInput ? ageJilaParishadInput.value.trim() : (ageState.jilaParishad || '');
-                const ps = agePanchayatSamitiInput ? agePanchayatSamitiInput.value.trim() : (ageState.panchayatSamiti || '');
+            const wardTitle = agePanchayatInput ? agePanchayatInput.value.trim() : 'ग्राम पंचायत';
+            const listTitle = ageListTitleInput ? ageListTitleInput.value.trim() : '';
+            const boothAddr = ageBoothInput ? ageBoothInput.value.trim() : '';
+            const selWard = ageWardSelect ? ageWardSelect.value : 'all';
+            const filterActive = ageActiveOnlyCheck ? ageActiveOnlyCheck.checked : true;
+            const jp = ageJilaParishadInput ? ageJilaParishadInput.value.trim() : (ageState.jilaParishad || '');
+            const ps = agePanchayatSamitiInput ? agePanchayatSamitiInput.value.trim() : (ageState.panchayatSamiti || '');
+            const fallbackPrintUrl = `/age_list/print?session_id=${ageState.sessionId}&ward_title=${encodeURIComponent(wardTitle)}&list_title=${encodeURIComponent(listTitle)}&booth_address=${encodeURIComponent(boothAddr)}&list_type=${ageState.listType}&min_age=${ageState.minAge}&max_age=${ageState.maxAge}&sort_order=${ageState.sortOrder}&selected_ward=${encodeURIComponent(selWard)}&filter_active_only=${filterActive}&jila_parishad=${encodeURIComponent(jp)}&panchayat_samiti=${encodeURIComponent(ps)}`;
 
+            try {
                 const payload = {
                     session_id: ageState.sessionId,
                     ward_title: wardTitle,
@@ -4159,9 +4230,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
 
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data.fallback_print && data.print_url) {
+                        window.open(data.print_url, '_blank');
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+                }
+
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'PDF डाउनलोड विफल');
+                    throw new Error('PDF डाउनलोड विफल (' + response.status + ')');
                 }
 
                 const blob = await response.blob();
@@ -4177,7 +4259,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } catch (err) {
-                alert('PDF निर्यात त्रुटि: ' + err.message);
+                if (err.message && (err.message.includes('headless Chrome') || err.message.includes('browser found') || err.message.includes('Edge browser'))) {
+                    window.open(fallbackPrintUrl, '_blank');
+                } else {
+                    alert('PDF निर्यात त्रुटि: ' + err.message);
+                }
             } finally {
                 ageDownloadPdfBtn.disabled = false;
                 ageDownloadPdfBtn.innerHTML = originalHtml;
