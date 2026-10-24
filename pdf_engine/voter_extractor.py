@@ -121,6 +121,27 @@ def sanitize_hindi_orthography(text: str) -> str:
     text = re.sub(r'(^|\s)भाधु(\b|$|\s)', r'\1माधु\2', text)
     text = re.sub(r'(^|\s)ज़ोरा(\b|$|\s)', r'\1जोरा\2', text)
 
+    # 18. Specific Devanagari OCR ligatures & Rajasthan voter roll name normalizations
+    text = re.sub(r'\bसिंग\b', 'सिंह', text)
+    text = re.sub(r'\bसिह\b', 'सिंह', text)
+    text = re.sub(r'([क-ह]+)सिह\b', r'\1सिंह', text)
+    text = re.sub(r'([क-ह]+)सिंग\b', r'\1सिंह', text)
+    text = re.sub(r'\bसुरतकंवर\b', 'सूरतकंवर', text)
+    text = re.sub(r'\bसुरत\b', 'सूरत', text)
+    text = re.sub(r'\bझ़?ू?र?त\b', 'सूरत', text)
+    text = re.sub(r'\bझ़?ूरत\b', 'सूरत', text)
+    text = re.sub(r'\bझुरेश\b', 'सुरेश', text)
+    text = re.sub(r'\bझोहन\b', 'सोहन', text)
+    text = re.sub(r'\b[शसथ]?गतावर', 'बगतावर', text)
+    text = re.sub(r'\b[फ़फ]ल\s*कंवर\b', 'फूल कंवर', text)
+    text = re.sub(r'\b[फ़फ]ल\b', 'फूल', text)
+    text = re.sub(r'\bफ़ूल\b', 'फूल', text)
+    text = re.sub(r'\bक[ँ|ं|े]?वर\b', 'कंवर', text)
+    text = re.sub(r'\bकवर\b', 'कंवर', text)
+    text = re.sub(r'\bकवरर\b', 'कंवर', text)
+    text = re.sub(r'\bकपरर\b', 'कंवर', text)
+    text = re.sub(r'\bकपर\b', 'कंवर', text)
+
     return text.strip()
 
 HINDI_PANCHAYAT_MAP = {
@@ -411,8 +432,8 @@ def clean_house_number_text(raw_house: str) -> str:
     h = h.replace('कमलर', 'कमला').replace('नकनय', 'नगर').replace('नरनय', 'नगर').replace('सपगम', 'संगम').replace('नरहरर', 'विहार').replace('अनचकमपर', 'अनुकम्पा')
 
     # 6. Punctuation cleanup
-    h = re.sub(r'^[,\-.:;\'"|\\/।॥\s_]+', '', h)
-    h = re.sub(r'[,\-.:;\'"|\\/।॥\s_]+$', '', h)
+    h = re.sub(r'^[=,\-.:;\'"|\\/।॥\s_]+', '', h)
+    h = re.sub(r'[=,\-.:;\'"|\\/।॥\s_]+$', '', h)
     return h.strip()
 
 def decode_corrupted_rajasthan_hindi(text: str) -> str:
@@ -426,6 +447,14 @@ def decode_corrupted_rajasthan_hindi(text: str) -> str:
         ('शरणकंवरर', 'श्रवण कंवर'), ('शरणकपरर', 'श्रवण कंवर'), ('शरण', 'श्रवण'),
         ('संपतयष', 'सन्तोष'), ('सनतयष', 'सन्तोष'), ('सपतयष', 'सन्तोष'), ('सनतयक', 'सन्तोष'),
         ('राजजद', 'राजेन्द्र'), ('ररजजद', 'राजेन्द्र'),
+        ('नरजज लसह', 'विजय सिंह'), ('नरजज', 'विजय'),
+        ('भरनरर लसह', 'भानवर सिंह'), ('भरनरर', 'भानवर'),
+        ('सचरतकंवर', 'सूरतकंवर'), ('सचरत', 'सूरत'),
+        ('पदमनसह', 'पदमसिंह'),
+        ('पलर लसह', 'पीर सिंह'), ('पलर', 'पीर'),
+        ('फलल कपरर', 'फूल कंवर'), ('फलल', 'फूल'),
+        ('राजल लसह', 'राजू सिंह'), ('राजल', 'राजू'),
+        ('ररजज', 'राजू'),
         ('सपगरम', 'संग्राम'),
         ('गचलरब', 'गुलाब'),
         ('पबरत', 'पर्वत'), ('पर्रत', 'पर्वत'), ('पररत', 'पर्वत'),
@@ -925,7 +954,7 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
             if is_deleted:
                 deleted_count += 1
 
-            if serial is None:
+            if serial is None or serial <= 0:
                 continue
 
             # Prevent duplicate serial entry from page vector rect overlap
@@ -1005,26 +1034,43 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
                     dig_relative_name = clean_hindi_name(decode_corrupted_rajasthan_hindi(m.group(1).strip()))
 
             # 2. Extract Names via narrow crop OCR
-            # y0+13 avoids leaking top serial/EPIC box line; x0+108 captures full names without clipping photo box
+            # y0+16 avoids leaking top serial/EPIC box line; x0+112 captures full names without clipping photo box
             ocr_lines = []
+            ocr_b = ""
             if is_tesseract_available():
                 try:
-                    name_crop_rect = pymupdf.Rect(x0 + 1, y0 + 13, x0 + 108, y0 + 52)
+                    name_crop_rect = pymupdf.Rect(x0 + 2, y0 + 16, x0 + 112, y0 + 44)
                     pix = p.get_pixmap(matrix=mat, clip=name_crop_rect)
                     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-
                     ocr_txt = pytesseract.image_to_string(img, lang="hin", config="--psm 6").strip()
                     ocr_lines = [l.strip() for l in ocr_txt.split('\n') if l.strip()]
-
-                    # Fallback for house number from OCR if card_text didn't have it
-                    if not house and ocr_txt:
-                        m_ocr = re.search(r'(?:मकान|हाउस|House)\s*(?:संख्या|सं\.?|नं\.?|नंबर|नम्बर|क्र\.?)?\s*[:\-\.=\'\"]*\s*([^\n\r]+?)(?=\s*(?:आयु|लिंग|Photo|$))', ocr_txt, re.IGNORECASE)
-                        if m_ocr:
-                            cand = clean_house_number_text(m_ocr.group(1).strip())
-                            if cand and not any(k in cand for k in ['आयु', 'आजच', 'लिंग', 'ललग', 'फोटो', 'Photo']):
-                                house = cand
                 except Exception:
                     ocr_lines = []
+
+                # Bottom crop for House, Age, Gender: captures visual text cleanly
+                try:
+                    b_crop_rect = pymupdf.Rect(x0 + 2, y0 + 40, x0 + 115, y1 - 1)
+                    pix_b = p.get_pixmap(matrix=mat, clip=b_crop_rect)
+                    img_b = Image.frombytes("RGB", [pix_b.width, pix_b.height], pix_b.samples)
+                    ocr_b = pytesseract.image_to_string(img_b, lang="hin+eng", config="--psm 6").strip()
+                except Exception:
+                    ocr_b = ""
+
+            # House number: Prefer visual OCR over corrupted font digital text
+            if ocr_b:
+                m_ocr_h = re.search(r'(?:मकान|हरऊस|हाउस|House)\s*(?:संख्या|सपखजर|सं\.?|नं\.?|नंबर|नम्बर|क्र\.?)?\s*[:\-\.=\'\"]*\s*([^\n\r]+?)(?=\s*(?:आयु|आजच|लिंग|ललग|Photo|$))', ocr_b, re.I)
+                if m_ocr_h:
+                    cand = clean_house_number_text(m_ocr_h.group(1).strip())
+                    if cand and not any(k in cand for k in ['आयु', 'आजच', 'लिंग', 'ललग', 'फोटो', 'Photo']):
+                        house = cand
+
+            # Age fallback: check bottom OCR
+            if not age and ocr_b:
+                age_m = re.search(r'(?:आजच|आयु|आयच|आय|आजु|Age)[^\d]{0,25}(\d{1,3})', ocr_b)
+                if age_m:
+                    val = int(age_m.group(1))
+                    if 18 <= val <= 125:
+                        age = val
 
             ocr_voter_name = ""
             ocr_relative_name = ""
@@ -1051,17 +1097,25 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
                         raw_name = re.sub(r'^.*?(?:नाम|नरम)\s*[:\-\s,.;ःं53\d\/\*~+=\\|_?’\'\"`!^<>]*', '', line).strip()
                         ocr_voter_name = clean_hindi_name(raw_name)
 
-            # 3. Smart Fusion & Priority Selection:
-            # - If digital text name is available and valid (length >= 2), prefer it as it has zero OCR noise.
-            # - If digital text is missing, empty, or un-decoded, use OCR name.
-            # - Fallback to whichever is populated.
-            voter_name = dig_voter_name if (dig_voter_name and len(dig_voter_name) >= 2) else ocr_voter_name
-            if not voter_name and ocr_voter_name:
-                voter_name = ocr_voter_name
+            # 3. High-Fidelity Priority Selection:
+            # - In Rajasthan Electoral Roll PDFs, digital text embedded in the PDF uses non-Unicode
+            #   legacy font glyph mappings (e.g. 'नरजज' for 'विजय', 'भरनरर' for 'भानवर', 'पदमनसह' for 'पदमसिंह').
+            # - Visual OCR directly reads the genuine Devanagari text rendered on paper/screen.
+            # - Therefore, OCR name and relative name take FIRST PRIORITY whenever available.
+            # - Fallback to digital text occurs only when OCR is empty or Tesseract is unavailable.
+            if ocr_voter_name and len(ocr_voter_name.strip()) >= 2:
+                voter_name = ocr_voter_name.strip()
+            elif dig_voter_name and len(dig_voter_name.strip()) >= 2:
+                voter_name = dig_voter_name.strip()
+            else:
+                voter_name = (ocr_voter_name or dig_voter_name or "").strip()
 
-            relative_name = dig_relative_name if (dig_relative_name and len(dig_relative_name) >= 2) else ocr_relative_name
-            if not relative_name and ocr_relative_name:
-                relative_name = ocr_relative_name
+            if ocr_relative_name and len(ocr_relative_name.strip()) >= 2:
+                relative_name = ocr_relative_name.strip()
+            elif dig_relative_name and len(dig_relative_name.strip()) >= 2:
+                relative_name = dig_relative_name.strip()
+            else:
+                relative_name = (ocr_relative_name or dig_relative_name or "").strip()
 
             # Cross-field filtration: Remove leaked relative name from voter name
             if voter_name and relative_name:
@@ -1069,35 +1123,40 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
                 voter_name = clean_hindi_name(voter_name)
                 relative_name = clean_hindi_name(relative_name)
 
-            # Final fallback for age if still empty: OCR bottom area
-            if not age and is_tesseract_available():
-                try:
-                    age_crop_rect = pymupdf.Rect(x0 + 1, y0 + 46, x0 + 115, y1 - 1)
-                    pix_age = p.get_pixmap(matrix=mat, clip=age_crop_rect)
-                    img_age = Image.frombytes("RGB", [pix_age.width, pix_age.height], pix_age.samples)
-                    ocr_age_txt = pytesseract.image_to_string(img_age, lang="hin+eng", config="--psm 6")
-                    digits = re.findall(r'\b(1[89]|[2-9]\d|1[01]\d)\b', ocr_age_txt)
-                    if digits:
-                        age = int(digits[0])
-                except Exception:
-                    pass
-
-            # Gender extraction
+            # Gender extraction: High accuracy check
             gender = ""
-            if re.search(r'(?:सल|स्त्री|महिला|मनहलर|Female|\bF\b)', card_text, re.IGNORECASE):
-                gender = "स्त्री"
-            elif re.search(r'(?:पचरष|पुरूष|पुरुष|Male|\bM\b)', card_text, re.IGNORECASE):
-                gender = "पुरूष"
-            elif "पति" in relative_name or any(w in voter_name for w in [
-                'देवी', 'बाई', 'कुमारी', 'कंवर', 'बेगम', 'कौर', 'सुगना', 'शांति', 'मंजू', 'मन्जू', 
-                'रेखा', 'कमला', 'सीता', 'गीता', 'पुष्पा', 'सुशीला', 'अनीता', 'सुनीता', 'संगीता', 
-                'माया', 'लीला', 'पूजा', 'आरती', 'राधा', 'ममता', 'शारदा', 'किरण', 'मोनिका', 
-                'प्रियंका', 'नेनी', 'भागुती', 'मनभरी', 'काली', 'संतोष', 'ललिता', 'पिंकी', 'कौशल्या',
-                'उर्मिला', 'मिस', 'विमला', 'भावना', 'आशा', 'कृष्णा', 'लक्ष्मी', 'पार्वती'
-            ]):
-                gender = "स्त्री"
-            else:
-                gender = "पुरूष"
+            if ocr_b:
+                if re.search(r'(?:स्त्री|महिला|मनहलर|Female)', ocr_b, re.IGNORECASE) or 'aft' in ocr_b.lower():
+                    gender = "स्त्री"
+                elif re.search(r'(?:पुरूष|पुरुष|पचरष|Male)', ocr_b, re.IGNORECASE):
+                    gender = "पुरूष"
+
+            if not gender:
+                # Strict label check on card_text to avoid false positives (e.g. 'सलरत' matching 'सल')
+                m_g = re.search(r'(?:ललग|लिंग|Sex|Gender)\s*[:\-\s]*([^\n\s]+)', card_text)
+                if m_g:
+                    g_val = m_g.group(1).strip()
+                    if any(k in g_val for k in ['स्त्री', 'महिला', 'मनहलर', 'Female', 'F', 'सल']):
+                        gender = "स्त्री"
+                    elif any(k in g_val for k in ['पचरष', 'पुरूष', 'पुरुष', 'Male', 'M']):
+                        gender = "पुरूष"
+
+            if not gender:
+                has_husband = bool(re.search(r'(?:पति|पनत)\s*(?:कर|का|की|के)?\s*(?:नरम|नाम)?', card_text)) or "पति" in relative_name
+                if has_husband or any(w in voter_name for w in [
+                    'देवी', 'बाई', 'कुमारी', 'कंवर', 'बेगम', 'कौर', 'सुगना', 'शांति', 'मंजू', 'मन्जू', 
+                    'रेखा', 'कमला', 'सीता', 'गीता', 'पुष्पा', 'सुशीला', 'अनीता', 'सुनीता', 'संगीता', 
+                    'माया', 'लीला', 'पूजा', 'आरती', 'राधा', 'ममता', 'शारदा', 'किरण', 'मोनिका', 
+                    'प्रियंका', 'नेनी', 'भागुती', 'मनभरी', 'काली', 'संतोष', 'ललिता', 'पिंकी', 'कौशल्या',
+                    'उर्मिला', 'मिस', 'विमला', 'भावना', 'आशा', 'कृष्णा', 'लक्ष्मी', 'पार्वती'
+                ]):
+                    gender = "स्त्री"
+                else:
+                    gender = "पुरूष"
+
+            # Skip stray cards with no voter name or relative name
+            if not voter_name and not relative_name:
+                continue
 
             voter_row = {
                 'वार्ड नं.': part_no,
