@@ -65,6 +65,62 @@ def sanitize_hindi_orthography(text: str) -> str:
     # 10. Spurious leading 'ज्' before 'न' (e.g. 'ज्नारायणनाथ' -> 'नारायणनाथ')
     text = re.sub(r'(^|\s)ज्(?=न)', r'\1', text)
 
+    # 11. Stray single OCR separator letters at start of word: e.g. "श भैरूलाल" -> "भैरूलाल", "र राम" -> "राम", "झ सोहन" -> "सोहन"
+    text = re.sub(r'(^|\s)[शसरझक]\s+', r'\1', text)
+
+    # 12. Spurious leading 'श' before consonants that never form initial Sanskrit/Hindi digraphs with 'श'
+    # Examples: शभैरूलाल -> भैरूलाल, शचम्पालाल -> चम्पालाल, शजगदीश -> जगदीश, शबाबूलाल -> बाबूलाल
+    text = re.sub(r'(^|\s)श(?=[भचजपबदधगघटठडढतहसल])', r'\1', text)
+
+    # Spurious 'श' before 'शिव' (e.g. शशिवराज -> शिवराज, शशिवलाल -> शिवलाल, शशिवराम -> शिवराम)
+    text = re.sub(r'(^|\s)श(?=शिव)', r'\1', text)
+
+    # Spurious 'श' before 'म' or 'क' with matras (e.g. शमोहन -> मोहन, शकैलाश -> कैलाश, शकमलेश -> कमलेश)
+    text = re.sub(r'(^|\s)श(?=[मक][ािीुूेैोौ])', r'\1', text)
+
+    # 13. Spurious double initial 'र' (e.g. ररामचन्द्र -> रामचन्द्र, ररोशन -> रोशन, रराज -> राज, ररामलाल -> रामलाल)
+    text = re.sub(r'(^|\s)र(?=र[ािीुूेैोौ]?)', r'\1', text)
+
+    # 14. Common Devanagari OCR confusion corrections (झ -> स)
+    text = re.sub(r'(^|\s)झोहन', r'\1सोहन', text)
+    text = re.sub(r'(^|\s)झ[ॉांँ]+वर', r'\1सांवर', text)
+    text = re.sub(r'(^|\s)झुरेश', r'\1सुरेश', text)
+    text = re.sub(r'(^|\s)झुभाष', r'\1सुभाष', text)
+    text = re.sub(r'(^|\s)झ[ंन्]+तोष', r'\1सन्तोष', text)
+    text = re.sub(r'(^|\s)झत्य', r'\1सत्य', text)
+    text = re.sub(r'(^|\s)झुशीला', r'\1सुशीला', text)
+    text = re.sub(r'(^|\s)झुमित्रा', r'\1सुमित्रा', text)
+    text = re.sub(r'(^|\s)झुन्?दर', r'\1सुन्दर', text)
+    text = re.sub(r'(^|\s)झोन[ूु]', r'\1सोनू', text)
+    text = re.sub(r'(^|\s)झोना', r'\1सोना', text)
+    text = re.sub(r'(^|\s)झुनीता', r'\1सुनीता', text)
+    text = re.sub(r'(^|\s)झुमन', r'\1सुमन', text)
+    text = re.sub(r'(^|\s)झुख', r'\1सुख', text)
+    text = re.sub(r'(^|\s)झुरेन्द्र', r'\1सुरेन्द्र', text)
+    text = re.sub(r'(^|\s)झं?जय', r'\1संजय', text)
+
+    # 15. Common Devanagari OCR confusion corrections (श -> ग)
+    text = re.sub(r'(^|\s)शोपाल', r'\1गोपाल', text)
+    text = re.sub(r'(^|\s)शोविन्?द', r'\1गोविन्द', text)
+    text = re.sub(r'(^|\s)शोवर्धन', r'\1गोवर्धन', text)
+    text = re.sub(r'(^|\s)शोपी', r'\1गोपी', text)
+    text = re.sub(r'(^|\s)शोतम', r'\1गौतम', text)
+    text = re.sub(r'(^|\s)शौरी', r'\1गौरी', text)
+    text = re.sub(r'(^|\s)शोरा', r'\1गोरा', text)
+    text = re.sub(r'(^|\s)शोमती', r'\1गोमती', text)
+    text = re.sub(r'(^|\s)शंगाराम', r'\1गंगाराम', text)
+
+    # 16. Common Devanagari OCR confusion corrections (श्व -> घ)
+    text = re.sub(r'(^|\s)श्वासी', r'\1घासी', text)
+    text = re.sub(r'(^|\s)श्वीसा', r'\1घीसा', text)
+    text = re.sub(r'(^|\s)श्वीसी', r'\1घीसा', text)
+    text = re.sub(r'(^|\s)श्व[ंम]+डी', r'\1घमंडी', text)
+    text = re.sub(r'(^|\s)श्वनश्याम', r'\1घनश्याम', text)
+
+    # 17. Recurring OCR artifacts on names
+    text = re.sub(r'(^|\s)भाधु(\b|$|\s)', r'\1माधु\2', text)
+    text = re.sub(r'(^|\s)ज़ोरा(\b|$|\s)', r'\1जोरा\2', text)
+
     return text.strip()
 
 HINDI_PANCHAYAT_MAP = {
@@ -375,32 +431,105 @@ def decode_corrupted_rajasthan_hindi(text: str) -> str:
         ('पबरत', 'पर्वत'), ('पर्रत', 'पर्वत'), ('पररत', 'पर्वत'),
         ('गयधरन', 'गोवर्धन'),
         ('भभर', 'भंवर'),
-        ('हरर', 'हरि'),
+        ('हररदकशन', 'हरिकिशन'), ('हरल दकशन', 'हरिकिशन'), ('हरर', 'हरि'),
         ('रथ्यचनाथ', 'रघुनाथ'), ('रपधचनाथ', 'रघुनाथ'), ('रधचनरस', 'रघुनाथ'), ('रपधचनरस', 'रघुनाथ'),
         ('नरकनद', 'नरेन्द्र'), ('परल', 'पाल'),
         ('जगपरल', 'जगपाल'),
-        ('लकमण', 'लक्ष्मण'),
-        ('सचमका', 'सुमेर'), ('सचमकर', 'सुमेर'), ('सच', 'सुमेर'),
+        ('लकमण लसह', 'लक्ष्मण सिंह'), ('लकमण लरल', 'लक्ष्मण लाल'), ('लकमण', 'लक्ष्मण'),
+        ('लकमल', 'लक्ष्मी'),
+        ('सचमका', 'सुमेर'), ('सचमकर', 'सुमेर'),
+        ('सचरकश कचमररत', 'सुरेश कुमावत'), ('सचरकश', 'सुरेश'),
+        ('मचककश कचमररत', 'मुकेश कुमावत'), ('मचककश', 'मुकेश'),
         ('रजनकार', 'रोशन'), ('रजनकरर', 'रोशन'),
         ('कपरर', 'कंवर'), ('कंवरर', 'कंवर'), ('कपर', 'कंवर'), ('कवरर', 'कंवर'),
         ('नरम', 'नाम'), ('नपतर', 'पिता'), ('कर', 'का'), ('मकरन', 'मकान'), ('सपखजर', 'संख्या'),
-        ('नरररजण', 'नारायण'), ('लरल', 'लाल'), ('बरबबररम', 'बाबूराम'), ('ररडर', 'वार्ड'),
-        ('सपत', 'संपत'), ('नरस', 'नाथ'), ('बरलच', 'बालू'), ('ररमलरल', 'रामलाल'),
-        ('कमलश', 'कमलेश'), ('मनयन', 'मनीष'), ('शजत', 'शांति'), ('दरल', 'देवी'),
+        ('नरररजण लरल', 'नारायण लाल'), ('नरररजणलरल', 'नारायण लाल'), ('नरररजण', 'नारायण'),
+        ('लरलल', 'लाली'), ('लरल', 'लाल'),
+        ('बरबबररम', 'बाबूराम'), ('ररडर', 'वार्ड'),
+        ('सपत', 'संपत'), ('नरस', 'नाथ'),
+        ('बरलबररम', 'बालूराम'), ('बरलब', 'बालू'), ('बरलच', 'बालू'),
+        ('ररमलरल', 'रामलाल'),
+        ('कमलश', 'कमलेश'), ('मनयन', 'मनीष'), ('शजत', 'शांति'),
+        ('दकरल लरल', 'देवी लाल'), ('दकबल लरल', 'देवी लाल'), ('दकबललरल', 'देवी लाल'),
+        ('दकाल', 'देवी'), ('दकरल', 'देवी'), ('दकबल', 'देवी'), ('दरल', 'देवी'),
         ('पजर', 'पूजा'), ('जयगल', 'योगी'), ('मरजर', 'माया'), ('टममच', 'टम्मू'),
         ('पजररल', 'प्यारी'), ('रयशन', 'रोशन'), ('सलतर', 'सीता'), ('बशशल', 'बंशी'),
-        ('सचखर', 'सुखा'), ('सयहन', 'सोहन'), ('पचषपर', 'पुष्पा'),
-        ('दकाल', 'देवी'), ('दकरल', 'देवी'), ('शमरर', 'शर्मा'), ('कचमररत', 'कुमावत'),
-        ('सचरकश', 'सुरेश'), ('मचककश', 'मुकेश'), ('चनन', 'चन्द'), ('गयलरद', 'गोविन्द'),
-        ('गयनरनद', 'गोविन्द'), ('दलपक', 'दीपक'), ('भगरतल', 'भगवती'), ('कतषण', 'कृष्ण'),
-        ('कापतर', 'कान्ता'), ('मपजब', 'मंजू'), ('अमबरलाल', 'अम्बालाल'), ('अमबर', 'अम्बा'),
-        ('अमरल', 'अमरा'), ('ररज', 'राज'), ('जयरत', 'ज्योति'), ('ससप', 'सिंह'),
-        ('ससह', 'सिंह'), ('कचर', 'कुंवर'), ('ररम', 'राम')
+        ('सचखरलरल', 'सुखलाल'), ('सचखररज', 'सुखराज'), ('सचखर', 'सुखा'),
+        ('सयहन', 'सोहन'), ('पचषपर', 'पुष्पा'),
+        ('शमरर', 'शर्मा'), ('कचमररत', 'कुमावत'),
+        ('चनन', 'चन्द'), ('चनद', 'चन्द'), ('चपन', 'चन्द'),
+        ('गयलरद', 'गोविन्द'), ('गयनरनद', 'गोविन्द'),
+        ('गयपल लरल', 'गोपाल लाल'), ('गयपल', 'गोपाल'),
+        ('मरधच', 'माधु'), ('धरपब', 'धापू'), ('अलयलल', 'अलोली'),
+        ('हलरर लरल', 'हीरा लाल'), ('हलरर लसग', 'हीरा सिंह'), ('हलरर लसह', 'हीरा सिंह'), ('हलरर', 'हीरा'),
+        ('लरडब लसग', 'लाडू सिंह'), ('लरडब', 'लाडू'),
+        ('दचगररलरल', 'दुर्गालाल'), ('दचगरर', 'दुर्गा'),
+        ('कमलर', 'कमला'), ('भरगबररम', 'भागूराम'), ('भरगच', 'भागू'),
+        ('ररमपसरद', 'रामप्रसाद'), ('पसरद', 'प्रसाद'),
+        ('जयरर', 'जोरा'), ('अनयपल', 'अनोप'),
+        ('महररलर कचमररत', 'महावीर कुमावत'), ('महररलर लसग', 'महावीर सिंह'), ('महररलर', 'महावीर'),
+        ('लहरल', 'लहरी'), ('ररमसररप', 'रामस्वरूप'), ('धनल', 'धनी'),
+        ('ददनकश कचमररत', 'दिनेश कुमावत'), ('ददनकश', 'दिनेश'),
+        ('लरदबररम', 'लादूराम'), ('लरदबलरल', 'लादूलाल'), ('लरदब', 'लाडू'),
+        ('दलकललसह', 'दिलीप सिंह'), ('दलकल लसह', 'दिलीप सिंह'), ('दलकल', 'दिलीप'),
+        ('ककसरलसह', 'केसर सिंह'), ('ककसर', 'केसर'),
+        ('घलसब कपरर', 'घीसा कंवर'), ('घलसब लरल', 'घीसा लाल'), ('घलसब', 'घीसा'),
+        ('सतजनरररजण कचमररत', 'सत्यनारायण कुमावत'), ('सतजनरररजण', 'सत्यनारायण'),
+        ('रपर कचमररत', 'रूपा कुमावत'), ('रपर', 'रूपा'),
+        ('पररसल दकरल', 'पारस देवी'), ('पररसल', 'पारस'),
+        ('हकमकनन लसह', 'हुकम सिंह'), ('हकमकनन', 'हुकम'),
+        ('पतरप लसह', 'प्रताप सिंह'), ('पतरप लसग', 'प्रताप सिंह'), ('पतरप', 'प्रताप'),
+        ('पबजर कचमररत', 'पूजा कुमावत'), ('पबजर', 'पूजा'),
+        ('अपजनर कचमररत', 'अंजना कुमावत'), ('अपजनर', 'अंजना'),
+        ('लचमबर', 'लीम्बा'), ('जरलर', 'जीवा'), ('अननतर', 'अनिता'),
+        ('पकरश', 'प्रकाश'), ('आससद', 'आसीन्द'),
+        ('हन जर', 'हजारी'), ('मयतल', 'मोती'),
+        ('पकम कपरर', 'प्रेम कंवर'), ('पकम दकरल', 'प्रेम देवी'), ('पकम', 'प्रेम'),
+        ('शपभब नसहप', 'शम्भू सिंह'), ('शपभब', 'शम्भू'), ('नसहप', 'सिंह'),
+        ('तलजर', 'तेजा'), ('मयहन लसग', 'मोहन सिंह'), ('मयहन', 'मोहन'),
+        ('पपपब लसह', 'पप्पू सिंह'), ('पपपब', 'पप्पू'),
+        ('सचगनर', 'सुगना'), ('लललर गचजर', 'लीला गुर्जर'), ('लललर', 'लीला'),
+        ('रररत', 'रावत'),
+        ('ररमचनन', 'रामचन्द्र'), ('जरररर', 'जवाहरा'),
+        ('ननदब', 'नन्दू'), ('लचतर', 'छीतर'), ('नरनल', 'नानी'),
+        ('धमरचपद', 'धर्मचन्द'), ('धमरचनन', 'धर्मचन्द'),
+        ('सरपरररजर लरल', 'संपतराज लाल'), ('सरपरररजर', 'संपतराज'), ('सरसरररजर लरल', 'संपतराज लाल'), ('सरसरररजर', 'संपतराज'),
+        ('सरपरर लरल', 'संपत लाल'), ('सरपरर', 'संपत'),
+        ('शलदकशन', 'बालकिशन'), ('भपररल', 'भंवरी'),
+        ('गचजर', 'गुर्जर'), ('ररधर', 'राधा'),
+        ('बरदल', 'बादाम'), ('ऊपकरर', 'ओंकार'),
+        ('दकशनलरल', 'किशनलाल'), ('दकसन लरल', 'किशनलाल'), ('दकशन', 'किशन'), ('दकसन', 'किशन'),
+        ('चरनदल दकरल', 'चांदी देवी'), ('चरनदल', 'चांदी'),
+        ('ररमबदकरल', 'रामप्यारी'), ('हजररल', 'हजारीलाल'),
+        ('सरजब', 'सूरज'), ('दकरकक', 'देवकन'), ('दकरबक', 'देवकंवर'),
+        ('कबपरररम', 'कुम्भाराम'), ('गणल', 'गुणी'),
+        ('ररमकतषण', 'रामकृष्ण'), ('कचपर', 'कुम्भा'),
+        ('भरगरतल गचजर', 'भगवती गुर्जर'), ('भरगरतल', 'भगवती'), ('भगरतल', 'भगवती'),
+        ('ममतर', 'ममता'),
+        ('रकखर गचजर', 'रेखा गुर्जर'), ('रकखर', 'रेखा'),
+        ('नमशल लरल', 'मिश्री लाल'), ('नमशल', 'मिश्री'),
+        ('डबपगर ररम', 'डूंगर राम'), ('डबपगर', 'डूंगर'),
+        ('कपकब दकरल', 'केकू देवी'), ('कपकब', 'केकू'),
+        ('उददत दकरल', 'उदय देवी'), ('उददत', 'उदय'),
+        ('लनलत', 'ललित'), ('दकरर', 'देवा'),
+        ('हकमर', 'हुकमा'), ('ईश रर', 'ईश्वर'),
+        ('समतर दकरल', 'सुमित्रा देवी'), ('समतर', 'सुमित्रा'),
+        ('कलपनर', 'कल्पना'),
+        ('पकमरररम', 'प्रेमाराम'), ('पकमर', 'प्रेमा'),
+        ('भबरर', 'भंवरा'), ('धलसच लरल', 'धीसू लाल'), ('धलसच', 'धीसू'),
+        ('दलपक', 'दीपक'), ('कतषण ररज', 'कृष्ण राज'), ('कतषण', 'कृष्ण'),
+        ('कापतर', 'कान्ता'), ('करपतर', 'कान्ता'),
+        ('मपजब दकरल', 'मंजू देवी'), ('मपजब', 'मंजू'),
+        ('अमबरलाल', 'अम्बालाल'), ('अमबरलरल', 'अम्बालाल'), ('अमबर', 'अम्बा'),
+        ('अमरल', 'अमरा'), ('ररज', 'राज'), ('जयरत', 'ज्योति'),
+        ('ससप', 'सिंह'), ('ससह', 'सिंह'), ('लसग', 'सिंह'), ('लसह', 'सिंह'),
+        ('कचर', 'कुंवर'), ('ररम', 'राम')
     ]
     res = text
     for old, new in replacements:
         res = res.replace(old, new)
     res = re.sub(r'ल\s*सह\b', 'सिंह', res)
+    res = re.sub(r'ल\s*सग\b', 'सिंह', res)
     return res
 
 def is_voter_list_pdf(pdf_path: str) -> bool:
@@ -848,7 +977,34 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
                 if not any(k in raw_addr for k in ['लिंग', 'आयु', 'फोटो', 'Photo']):
                     voter_address = clean_hindi_name(raw_addr)
 
-            # Extract Names via narrow crop OCR
+            # 1. Digital Text Name Extraction (Direct from PDF vectors, zero OCR blur/skew)
+            dig_voter_name = ""
+            dig_relative_name = ""
+
+            for ln in [" ".join(w[4] for w in ln_words) for ln_words in lines_grouped]:
+                # Voter Name line: contains 'नरम' or 'नाम', but not relation keywords
+                if ("नरम" in ln or "नाम" in ln) and not any(k in ln for k in ['नपतर', 'पिता', 'पनत', 'पति', 'मरतर', 'माता', 'अनज', 'अन्य', 'संरक्षक', 'अभिभावक']):
+                    m_v = re.search(r'(?:नरम|नाम)\s*[:\-\s]*\s*(.*?)(?=\s*(?:Photo|is|Available|मकरन|मकान|आजच|आयु|ललग|लिंग|$))', ln, re.I)
+                    if m_v and m_v.group(1).strip():
+                        dig_voter_name = clean_hindi_name(decode_corrupted_rajasthan_hindi(m_v.group(1).strip()))
+
+                # Relative Name line: contains relation keyword
+                if any(k in ln for k in ['नपतर', 'पिता', 'पनत', 'पति', 'मरतर', 'माता', 'अनज', 'अन्य', 'संरक्षक', 'अभिभावक']):
+                    m_r = re.search(r'(?:नपतर|पिता|पनत|पति|मरतर|माता|अनज|अन्य|संरक्षक|अभिभावक)\s*(?:कर|का|की|के)?\s*(?:नरम|नाम)?\s*[:\-\s]*\s*(.*?)(?=\s*(?:Photo|is|Available|मकरन|मकान|आजच|आयु|ललग|लिंग|$))', ln, re.I)
+                    if m_r and m_r.group(1).strip():
+                        dig_relative_name = clean_hindi_name(decode_corrupted_rajasthan_hindi(m_r.group(1).strip()))
+
+            # Fallback across full card_text if lines_grouped missed either
+            if not dig_voter_name:
+                m = re.search(r'(?:नरम|नाम)\s*[:\-\s]*([^\n]+?)(?:Photo|is|Available|नपतर|पिता|पनत|पति|माता|मरतर|अनज|ललग|लिंग|$)', card_text)
+                if m:
+                    dig_voter_name = clean_hindi_name(decode_corrupted_rajasthan_hindi(m.group(1).strip()))
+            if not dig_relative_name:
+                m = re.search(r'(?:नपतर|पिता|पनत|पति|माता|मरतर|अनज|अन्य|संरक्षक|अभिभावक)\s*(?:कर|का|की|के)?\s*(?:नरम|नाम)?\s*[:\-\s]*([^\n]+?)(?:Photo|is|Available|मकरन|मकान|आजच|आयु|ललग|लिंग|$)', card_text)
+                if m:
+                    dig_relative_name = clean_hindi_name(decode_corrupted_rajasthan_hindi(m.group(1).strip()))
+
+            # 2. Extract Names via narrow crop OCR
             # y0+13 avoids leaking top serial/EPIC box line; x0+108 captures full names without clipping photo box
             ocr_lines = []
             if is_tesseract_available():
@@ -870,40 +1026,42 @@ def extract_voters_with_stats(pdf_path: str, progress_callback: Optional[Any] = 
                 except Exception:
                     ocr_lines = []
 
-            voter_name = ""
-            relative_name = ""
+            ocr_voter_name = ""
+            ocr_relative_name = ""
 
             for line in ocr_lines:
                 # Check if line contains a relative keyword (Father / Husband / Mother / Guardian / Other)
                 has_rel = bool(re.search(r'(?:पिता|पति|माता|अन्य|संरक्षक|अभिभावक|नपतर|पनत|मरतर|अनज)', line))
                 if has_rel:
                     # Check if line contains BOTH voter name and relative name (e.g. 'नाम: रामलाल पिता का नाम: श्यामलाल')
-                    m_split = re.split(r'(?:पिता|पति|माता|अन्य|संरक्षक|अभिभावक|नपतर|पनत|मरतर|अनज)\s*(?:का|की|के|कर)?\s*(?:नाम|नरम)?\s*[:\-\s,.;ःं53\d]*', line, maxsplit=1)
+                    m_split = re.split(r'(?:पिता|पति|माता|अन्य|संरक्षक|अभिभावक|नपतर|पनत|मरतर|अनज)\s*(?:का|की|के|कर)?\s*(?:नाम|नरम)?\s*[:\-\s,.;ःं53\d\/\*~+=\\|_?’\'\"`!^<>]*', line, maxsplit=1)
                     if len(m_split) == 2:
                         part_before, part_after = m_split[0].strip(), m_split[1].strip()
-                        if ("नाम" in part_before or "नरम" in part_before) and not voter_name:
-                            raw_n = re.sub(r'^.*?(?:नाम|नरम)\s*[:\-\s,.;ःं53\d]*', '', part_before)
-                            voter_name = clean_hindi_name(raw_n)
-                        if not relative_name and part_after:
-                            relative_name = clean_hindi_name(part_after)
+                        if ("नाम" in part_before or "नरम" in part_before) and not ocr_voter_name:
+                            raw_n = re.sub(r'^.*?(?:नाम|नरम)\s*[:\-\s,.;ःं53\d\/\*~+=\\|_?’\'\"`!^<>]*', '', part_before)
+                            ocr_voter_name = clean_hindi_name(raw_n)
+                        if not ocr_relative_name and part_after:
+                            ocr_relative_name = clean_hindi_name(part_after)
                     else:
-                        if not relative_name:
-                            raw_rel = re.sub(r'^.*?(?:पिता|पति|माता|अन्य|संरक्षक|अभिभावक|नपतर|पनत|मरतर|अनज)\s*(?:का|की|के|कर)?\s*(?:नाम|नरम)?\s*[:\-\s,.;ःं53\d]*', '', line).strip()
-                            relative_name = clean_hindi_name(raw_rel)
+                        if not ocr_relative_name:
+                            raw_rel = re.sub(r'^.*?(?:पिता|पति|माता|अन्य|संरक्षक|अभिभावक|नपतर|पनत|मरतर|अनज)\s*(?:का|की|के|कर)?\s*(?:नाम|नरम)?\s*[:\-\s,.;ःं53\d\/\*~+=\\|_?’\'\"`!^<>]*', '', line).strip()
+                            ocr_relative_name = clean_hindi_name(raw_rel)
                 else:
-                    if ("नाम" in line or "नरम" in line) and not voter_name:
-                        raw_name = re.sub(r'^.*?(?:नाम|नरम)\s*[:\-\s,.;ःं53\d]*', '', line).strip()
-                        voter_name = clean_hindi_name(raw_name)
+                    if ("नाम" in line or "नरम" in line) and not ocr_voter_name:
+                        raw_name = re.sub(r'^.*?(?:नाम|नरम)\s*[:\-\s,.;ःं53\d\/\*~+=\\|_?’\'\"`!^<>]*', '', line).strip()
+                        ocr_voter_name = clean_hindi_name(raw_name)
 
-            # Fallback to decoded digital text if OCR missed name (e.g. obscured by watermark stamp)
-            if not voter_name:
-                m = re.search(r'(?:नरम|नाम)\s*[:\-\s]*([^\n]+?)(?:Photo|नपतर|पिता|पति|माता|मरतर|पनत|अनज|ललग|$)', card_text)
-                if m:
-                    voter_name = clean_hindi_name(decode_corrupted_rajasthan_hindi(m.group(1).strip()))
-            if not relative_name:
-                m = re.search(r'(?:नपतर|पिता|पति|माता|मरतर|पनत|अनज|अन्य|संरक्षक|अभिभावक)\s*(?:कर|का|की|के)?\s*(?:नरम|नाम)?\s*[:\-\s]*([^\n]+?)(?:Photo|मकरन|मकान|आजच|आयु|ललग|$)', card_text)
-                if m:
-                    relative_name = clean_hindi_name(decode_corrupted_rajasthan_hindi(m.group(1).strip()))
+            # 3. Smart Fusion & Priority Selection:
+            # - If digital text name is available and valid (length >= 2), prefer it as it has zero OCR noise.
+            # - If digital text is missing, empty, or un-decoded, use OCR name.
+            # - Fallback to whichever is populated.
+            voter_name = dig_voter_name if (dig_voter_name and len(dig_voter_name) >= 2) else ocr_voter_name
+            if not voter_name and ocr_voter_name:
+                voter_name = ocr_voter_name
+
+            relative_name = dig_relative_name if (dig_relative_name and len(dig_relative_name) >= 2) else ocr_relative_name
+            if not relative_name and ocr_relative_name:
+                relative_name = ocr_relative_name
 
             # Cross-field filtration: Remove leaked relative name from voter name
             if voter_name and relative_name:
