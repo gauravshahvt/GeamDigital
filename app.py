@@ -85,6 +85,7 @@ COLOR_PARCHI_CACHE = {}
 ALPHA_CACHE = {}
 FAMILY_CACHE = {}
 AGE_CACHE = {}
+FEATURE8_CACHE = {}
 UPLOAD_TASKS = {}
 DISTRICT_TASKS = {}
 
@@ -3091,6 +3092,332 @@ def api_district_download_summary(task_id):
         download_name=os.path.basename(summary_file),
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+# ==============================================================
+# FEATURE 8: डायरेक्ट PDF ऑल-इन-वन (All Slips & Lists) ENDPOINTS
+# ==============================================================
+
+def _build_feature8_dataset(ward_results, panchayat_name_hint='', default_booth_hint=''):
+    """
+    Extracts all voter records across all wards, strictly skipping Deleted voters,
+    and returns a normalized dictionary suitable for parchi, color_parchi,
+    alpha, family, and age engines.
+    """
+    all_voters = []
+    total_deleted = 0
+    total_scanned = 0
+
+    for w in ward_results:
+        w_part = str(w.get('part_no', '1')).strip()
+        m_w = re.search(r'\d+', w_part)
+        clean_ward = m_w.group(0) if m_w else w_part
+
+        w_jp = str(w.get('jila_parishad', '')).strip()
+        w_ps = str(w.get('panchayat_samiti', '')).strip()
+        w_booth = str(w.get('booth_address', '')).strip()
+
+        # If voters list is directly provided
+        raw_voters = w.get('voters', [])
+        if not raw_voters and 'grid' in w:
+            grid = w['grid']
+            if len(grid) > 1:
+                headers = grid[0]
+                col_idx = {}
+                for idx, h in enumerate(headers):
+                    hl = re.sub(r'[\s\.\/०\-_:;|()\[\]]+', '', str(h).lower())
+                    if 'क्रम' in hl or 'serial' in hl: col_idx['serial'] = idx
+                    elif 'जि' in hl and 'प' in hl: col_idx['jila_parishad'] = idx
+                    elif 'पं' in hl and 'स' in hl: col_idx['panchayat_samiti'] = idx
+                    elif 'भाग' in hl or 'वार्ड' in hl or 'ward' in hl: col_idx['part_no'] = idx
+                    elif 'नाम' in hl and 'पिता' not in hl and 'पति' not in hl and 'बूथ' not in hl: col_idx['name'] = idx
+                    elif 'पिता' in hl or 'पति' in hl or 'संबंधी' in hl: col_idx['relative_name'] = idx
+                    elif 'आयु' in hl or 'उम्र' in hl or 'age' in hl: col_idx['age'] = idx
+                    elif 'लिंग' in hl or 'gender' in hl or 'sex' in hl: col_idx['gender'] = idx
+                    elif 'पहचान' in hl or 'epic' in hl or 'वोटर' in hl: col_idx['epic'] = idx
+                    elif 'मकान' in hl or 'हाउस' in hl or 'house' in hl: col_idx['house'] = idx
+                    elif 'बूथ' in hl or 'केंद्र' in hl: col_idx['booth_address'] = idx
+                    elif 'status' in hl or 'स्थिति' in hl: col_idx['status'] = idx
+
+                for row in grid[1:]:
+                    if not any(row): continue
+                    def gv(k):
+                        idx = col_idx.get(k)
+                        return clean_val_str(row[idx]) if idx is not None and idx < len(row) else ''
+                    raw_voters.append({
+                        'क्रम संख्या': gv('serial'),
+                        'जि. प.': gv('jila_parishad') or w_jp,
+                        'पं. स.': gv('panchayat_samiti') or w_ps,
+                        'वार्ड नं.': gv('part_no') or clean_ward,
+                        'नाम': gv('name'),
+                        'पिता/पति का नाम': gv('relative_name'),
+                        'आयु': gv('age'),
+                        'लिंग': gv('gender'),
+                        'वोटर ID': gv('epic'),
+                        'हाउस नंबर': gv('house'),
+                        'बूथ का पता': gv('booth_address') or w_booth,
+                        'Status': gv('status') or 'Active'
+                    })
+
+        for v in raw_voters:
+            total_scanned += 1
+            v_status = str(v.get('Status') or v.get('status') or 'Active').strip()
+            # STRICT REQUIREMENT: Skip Deleted voters!
+            if 'del' in v_status.lower() or 'विलोपित' in v_status:
+                total_deleted += 1
+                continue
+
+            raw_serial = v.get('क्रम संख्या') or v.get('serial')
+            try:
+                serial_val = int(float(raw_serial)) if raw_serial else (len(all_voters) + 1)
+            except (ValueError, TypeError):
+                serial_val = len(all_voters) + 1
+
+            raw_age = v.get('आयु') or v.get('age')
+            try:
+                age_val = int(float(raw_age)) if raw_age else ''
+            except (ValueError, TypeError):
+                age_val = raw_age
+
+            name = clean_val_str(v.get('नाम') or v.get('name') or '')
+            if not name:
+                continue
+
+            rel = clean_val_str(v.get('पिता/पति का नाम') or v.get('relative_name') or '')
+            raw_gender = v.get('लिंग') or v.get('gender') or ''
+            if raw_gender and str(raw_gender).strip():
+                rg = str(raw_gender).strip().lower()
+                if any(k in rg for k in ['f', 'female', 'mahila', 'stree', 'स्त्री', 'महिला', 'सल', 'म.', 'म']):
+                    gender = 'स्त्री'
+                elif any(k in rg for k in ['m', 'male', 'purush', 'पुरूष', 'पुरुष', 'पचरष', 'पु.', 'पु']):
+                    gender = 'पुरूष'
+                else:
+                    gender = str(raw_gender).strip()
+            else:
+                gender = predict_gender(name, rel)
+
+            part_no = clean_val_str(v.get('वार्ड नं.') or v.get('part_no') or clean_ward)
+            m_pw = re.search(r'\d+', part_no)
+            clean_part_no = m_pw.group(0) if m_pw else (part_no or '1')
+
+            epic = clean_val_str(v.get('वोटर ID') or v.get('epic') or '')
+            house = clean_val_str(v.get('हाउस नंबर') or v.get('house') or '00')
+            booth = clean_val_str(v.get('बूथ का पता') or v.get('booth_address') or w_booth or default_booth_hint)
+
+            v_jp = clean_val_str(v.get('जि. प.') or v.get('jila_parishad') or w_jp)
+            v_ps = clean_val_str(v.get('पं. स.') or v.get('panchayat_samiti') or w_ps)
+
+            all_voters.append({
+                'serial': serial_val,
+                'part_no': clean_part_no,
+                'ward': clean_part_no,
+                'jila_parishad': v_jp,
+                'panchayat_samiti': v_ps,
+                'name': name,
+                'relative_name': rel,
+                'age': age_val,
+                'gender': gender,
+                'epic': epic,
+                'house': house if house else '00',
+                'booth_address': booth,
+                'status': 'Active'
+            })
+
+    def _v_sort_key(item):
+        w_val = 1
+        try:
+            w_val = int(item['part_no'])
+        except (ValueError, TypeError):
+            pass
+        s_val = item['serial'] if isinstance(item['serial'], int) else 999999
+        return (w_val, s_val)
+
+    all_voters.sort(key=_v_sort_key)
+
+    def extract_w_key(v):
+        digits = re.findall(r'\d+', str(v or ''))
+        return int(digits[0]) if digits else 999999
+
+    raw_wards = sorted(list(set(str(v.get('part_no', '1')).strip() for v in all_voters if v.get('part_no'))), key=extract_w_key)
+    if not raw_wards:
+        raw_wards = ['1']
+
+    default_panchayat = panchayat_name_hint or 'ग्राम पंचायत'
+    if default_panchayat and not default_panchayat.startswith('ग्राम पंचायत'):
+        default_panchayat = f"ग्राम पंचायत {default_panchayat}"
+
+    default_part = raw_wards[0] if raw_wards else '1'
+    default_booth = default_booth_hint
+    if not default_booth and all_voters:
+        default_booth = next((v['booth_address'] for v in all_voters if v.get('booth_address')), '')
+    default_jp = next((v['jila_parishad'] for v in all_voters if v.get('jila_parishad')), '')
+    default_ps = next((v['panchayat_samiti'] for v in all_voters if v.get('panchayat_samiti')), '')
+
+    return {
+        'sheet_names': ['समस्त_सक्रिय_मतदाता'],
+        'active_sheet': 'समस्त_सक्रिय_मतदाता',
+        'wards': raw_wards,
+        'voters': all_voters,
+        'total_voters': len(all_voters),
+        'active_count': len(all_voters),
+        'deleted_count': total_deleted,
+        'total_scanned': total_scanned,
+        'default_panchayat_name': default_panchayat,
+        'default_part_no': default_part,
+        'default_booth_address': default_booth,
+        'default_jila_parishad': default_jp,
+        'default_panchayat_samiti': default_ps
+    }
+
+@app.route('/api/feature8/upload_pdf', methods=['POST'])
+def api_feature8_upload_pdf():
+    """
+    Direct PDF Upload endpoint for Feature 8:
+    Processes single or multiple Voter List PDFs, strictly omits Deleted voters,
+    and populates data across Plain Parchi, Color Parchi, Alphabetical, Family, and Age lists.
+    """
+    try:
+        uploaded_files = []
+        if 'pdf_files' in request.files:
+            uploaded_files = request.files.getlist('pdf_files')
+        elif 'pdf_file' in request.files:
+            uploaded_files = request.files.getlist('pdf_file')
+
+        uploaded_files = [f for f in uploaded_files if f and f.filename and f.filename.lower().endswith('.pdf')]
+        if not uploaded_files:
+            return jsonify({'error': 'कृपया कम से कम एक वैध .pdf मतदाता सूची फ़ाइल अपलोड करें'}), 400
+
+        session_id = str(uuid.uuid4())
+        saved_paths = []
+        file_names = []
+        for f in uploaded_files:
+            s_name = secure_filename(f.filename)
+            save_path = os.path.join(UPLOAD_FOLDER, f"feat8_{session_id}_{s_name}")
+            f.save(save_path)
+            saved_paths.append(save_path)
+            file_names.append(s_name)
+
+        # Process multiple or single PDF
+        result = process_multiple_wards(saved_paths)
+        p_name = result.get('panchayat_name', '')
+        b_addr = ''
+        if result.get('wards'):
+            b_addr = result['wards'][0].get('booth_address', '')
+
+        parsed = _build_feature8_dataset(result.get('wards', []), panchayat_name_hint=p_name, default_booth_hint=b_addr)
+        if not parsed['voters']:
+            return jsonify({'error': 'अपलोड की गई PDF में से कोई सक्रिय मतदाता नहीं मिला'}), 400
+
+        FEATURE8_CACHE[session_id] = {
+            'file_names': file_names,
+            'saved_paths': saved_paths,
+            'parsed': parsed,
+            'result': result
+        }
+
+        # Seamlessly sync to all sub-engines using the exact same session_id
+        shared_cache_entry = {
+            'file_path': saved_paths[0],
+            'filename': f"{parsed['default_panchayat_name']}.pdf",
+            'file_name': f"{parsed['default_panchayat_name']}.pdf",
+            'parsed': parsed
+        }
+        PARCHI_CACHE[session_id] = shared_cache_entry
+        COLOR_PARCHI_CACHE[session_id] = shared_cache_entry
+        ALPHA_CACHE[session_id] = shared_cache_entry
+        FAMILY_CACHE[session_id] = shared_cache_entry
+        AGE_CACHE[session_id] = shared_cache_entry
+
+        log_activity(
+            feature_id='feature8',
+            feature_name='फ़ीचर 8: डायरेक्ट PDF ऑल-इन-वन',
+            file_names=file_names,
+            action='डायरेक्ट पीडीएफ से सभी पर्चियां व सूचियां तैयार',
+            details=f"{parsed['total_voters']} सक्रिय मतदाता • {parsed['deleted_count']} विलोपित छोड़े गए • {len(parsed['wards'])} वार्ड्स"
+        )
+
+        return jsonify({
+            'session_id': session_id,
+            'total_scanned': parsed['total_scanned'],
+            'total_voters': parsed['total_voters'],
+            'active_count': parsed['active_count'],
+            'deleted_count': parsed['deleted_count'],
+            'wards': parsed['wards'],
+            'default_panchayat_name': parsed['default_panchayat_name'],
+            'default_part_no': parsed['default_part_no'],
+            'default_booth_address': parsed['default_booth_address'],
+            'default_jila_parishad': parsed['default_jila_parishad'],
+            'default_panchayat_samiti': parsed['default_panchayat_samiti'],
+            'voters_sample': parsed['voters'][:12]
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/feature8/from_session', methods=['POST'])
+def api_feature8_from_session():
+    """Loads existing processed data from Feature 1 session into Feature 8."""
+    try:
+        data = request.get_json() or {}
+        feature1_session_id = data.get('session_id')
+        if not feature1_session_id and SESSION_CACHE:
+            feature1_session_id = list(SESSION_CACHE.keys())[-1]
+
+        if not feature1_session_id or feature1_session_id not in SESSION_CACHE:
+            return jsonify({'error': 'वर्तमान में कोई सक्रिय सत्र डेटा उपलब्ध नहीं है। कृपया पीडीएफ़ अपलोड करें।'}), 404
+
+        res = SESSION_CACHE[feature1_session_id]['result']
+        session_id = str(uuid.uuid4())
+        p_name = res.get('panchayat_name', '')
+        b_addr = res.get('polling_station', '')
+        if not b_addr and res.get('wards'):
+            b_addr = res['wards'][0].get('booth_address', '')
+
+        parsed = _build_feature8_dataset(res.get('wards', []), panchayat_name_hint=p_name, default_booth_hint=b_addr)
+        if not parsed['voters']:
+            return jsonify({'error': 'वर्तमान सत्र में कोई सक्रिय मतदाता रिकॉर्ड नहीं मिले'}), 400
+
+        FEATURE8_CACHE[session_id] = {
+            'file_names': [SESSION_CACHE[feature1_session_id].get('file_name', 'वोटर_लिस्ट.pdf')],
+            'parsed': parsed,
+            'result': res
+        }
+
+        shared_cache_entry = {
+            'filename': f"{parsed['default_panchayat_name']}.pdf",
+            'file_name': f"{parsed['default_panchayat_name']}.pdf",
+            'parsed': parsed
+        }
+        PARCHI_CACHE[session_id] = shared_cache_entry
+        COLOR_PARCHI_CACHE[session_id] = shared_cache_entry
+        ALPHA_CACHE[session_id] = shared_cache_entry
+        FAMILY_CACHE[session_id] = shared_cache_entry
+        AGE_CACHE[session_id] = shared_cache_entry
+
+        log_activity(
+            feature_id='feature8',
+            feature_name='फ़ीचर 8: डायरेक्ट PDF ऑल-इन-वन',
+            file_names=[SESSION_CACHE[feature1_session_id].get('file_name', 'वोटर_लिस्ट.pdf')],
+            action='सत्र से सीधे सभी पर्चियां व सूचियां तैयार',
+            details=f"{parsed['total_voters']} सक्रिय मतदाता • {parsed['deleted_count']} विलोपित छोड़े गए"
+        )
+
+        return jsonify({
+            'session_id': session_id,
+            'total_scanned': parsed['total_scanned'],
+            'total_voters': parsed['total_voters'],
+            'active_count': parsed['active_count'],
+            'deleted_count': parsed['deleted_count'],
+            'wards': parsed['wards'],
+            'default_panchayat_name': parsed['default_panchayat_name'],
+            'default_part_no': parsed['default_part_no'],
+            'default_booth_address': parsed['default_booth_address'],
+            'default_jila_parishad': parsed['default_jila_parishad'],
+            'default_panchayat_samiti': parsed['default_panchayat_samiti'],
+            'voters_sample': parsed['voters'][:12]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

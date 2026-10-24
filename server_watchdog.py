@@ -12,7 +12,7 @@ base_dir = os.path.dirname(sys.executable)
 candidate_python = os.path.join(base_dir, 'python.exe')
 PYTHON_EXE = candidate_python if os.path.exists(candidate_python) else sys.executable
 
-WATCHDOG_LOCK_PORT = 5005  # Ensures single instance
+WATCHDOG_LOCK_PORT = 5025  # Ensures single instance
 
 def acquire_lock():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

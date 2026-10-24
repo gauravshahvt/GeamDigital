@@ -102,7 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'feature4', el: feature4Container, btn: tabFeature4Btn, activeClass: 'text-amber-900' },
             { id: 'feature5', el: document.getElementById('feature5Container'), btn: tabFeature5Btn, activeClass: 'text-purple-900' },
             { id: 'feature6', el: document.getElementById('feature6Container'), btn: tabFeature6Btn, activeClass: 'text-teal-900' },
-            { id: 'district', el: document.getElementById('districtContainer'), btn: document.getElementById('tabDistrictBtn'), activeClass: 'text-cyan-900' }
+            { id: 'district', el: document.getElementById('districtContainer'), btn: document.getElementById('tabDistrictBtn'), activeClass: 'text-cyan-900' },
+            { id: 'feature8', el: document.getElementById('feature8Container'), btn: document.getElementById('tabFeature8Btn'), activeClass: 'text-emerald-900' }
         ];
 
         containers.forEach(c => {
@@ -130,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (tabId === 'feature5') featureActiveDesc.textContent = 'समान मकान नंबर वार बड़े परिवारों की लिस्ट (अवरोही क्रम)';
             else if (tabId === 'feature6') featureActiveDesc.textContent = 'आयु अनुसार युवा (18-26 बढ़ते क्रम) एवं बुजुर्ग (120-70 घटते क्रम) लिस्ट';
             else if (tabId === 'district') featureActiveDesc.textContent = 'सम्पूर्ण ज़िला: पंचायत समिति ➔ ग्राम पंचायत ➔ वार्ड्स एक्सेल ऑटोमेशन';
+            else if (tabId === 'feature8') featureActiveDesc.textContent = 'डायरेक्ट PDF से Plain पर्ची, Color पर्ची, अल्फाबेटिक व बड़े-घर लिस्ट (विलोपित स्वतः Skip)';
         }
 
         if (window.lucide) lucide.createIcons();
@@ -143,6 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabFeature6Btn) tabFeature6Btn.addEventListener('click', () => switchTab('feature6'));
     const tabDistrictBtn = document.getElementById('tabDistrictBtn');
     if (tabDistrictBtn) tabDistrictBtn.addEventListener('click', () => switchTab('district'));
+    const tabFeature8Btn = document.getElementById('tabFeature8Btn');
+    if (tabFeature8Btn) tabFeature8Btn.addEventListener('click', () => switchTab('feature8'));
 
     if (goToParchiHeroBtn) {
         goToParchiHeroBtn.addEventListener('click', () => {
@@ -4890,8 +4894,1021 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ==============================================================
+    // FEATURE 8: DIRECT PDF ALL-IN-ONE STUDIO
+    // ==============================================================
+    function initFeature8() {
+        const feat8DropZone = document.getElementById('feat8DropZone');
+        const feat8FileInput = document.getElementById('feat8FileInput');
+        const feat8LoadSessionBtn = document.getElementById('feat8LoadSessionBtn');
+        const feat8FileSelectedBox = document.getElementById('feat8FileSelectedBox');
+        const feat8SelectedFileName = document.getElementById('feat8SelectedFileName');
+        const feat8SelectedFileSize = document.getElementById('feat8SelectedFileSize');
+        const feat8StartProcessBtn = document.getElementById('feat8StartProcessBtn');
+        const feat8StartProcessBtnText = document.getElementById('feat8StartProcessBtnText');
+        const feat8ProcessingBox = document.getElementById('feat8ProcessingBox');
+        const feat8ProcessMsg = document.getElementById('feat8ProcessMsg');
+        const feat8StatsCard = document.getElementById('feat8StatsCard');
+
+        // Stats Elements
+        const feat8StatPanchayat = document.getElementById('feat8StatPanchayat');
+        const feat8StatActive = document.getElementById('feat8StatActive');
+        const feat8StatDeleted = document.getElementById('feat8StatDeleted');
+        const feat8StatWards = document.getElementById('feat8StatWards');
+        const feat8StatJp = document.getElementById('feat8StatJp');
+        const feat8StatPs = document.getElementById('feat8StatPs');
+        const feat8DeletedBadge = document.getElementById('feat8DeletedBadge');
+
+        // Global Editable Inputs
+        const feat8PanchayatInput = document.getElementById('feat8PanchayatInput');
+        const feat8VotingTimeInput = document.getElementById('feat8VotingTimeInput');
+        const feat8JilaParishadInput = document.getElementById('feat8JilaParishadInput');
+        const feat8PanchayatSamitiInput = document.getElementById('feat8PanchayatSamitiInput');
+
+        // Sub-Tab Switcher Buttons
+        const feat8SubTabParchiBtn = document.getElementById('feat8SubTabParchiBtn');
+        const feat8SubTabColorBtn = document.getElementById('feat8SubTabColorBtn');
+        const feat8SubTabAlphaBtn = document.getElementById('feat8SubTabAlphaBtn');
+        const feat8SubTabFamilyBtn = document.getElementById('feat8SubTabFamilyBtn');
+
+        // Sub-Panels
+        const feat8PanelParchi = document.getElementById('feat8PanelParchi');
+        const feat8PanelColor = document.getElementById('feat8PanelColor');
+        const feat8PanelAlpha = document.getElementById('feat8PanelAlpha');
+        const feat8PanelFamily = document.getElementById('feat8PanelFamily');
+
+        // Sub-Tab 1 (Plain Parchi) Elements
+        const feat8ParchiLayoutSelect = document.getElementById('feat8ParchiLayoutSelect');
+        const feat8ParchiShowPageNumCheck = document.getElementById('feat8ParchiShowPageNumCheck');
+        const feat8ParchiRefreshBtn = document.getElementById('feat8ParchiRefreshBtn');
+        const feat8ParchiPrintBtn = document.getElementById('feat8ParchiPrintBtn');
+        const feat8ParchiPdfBtn = document.getElementById('feat8ParchiPdfBtn');
+        const feat8ParchiPrevBtn = document.getElementById('feat8ParchiPrevBtn');
+        const feat8ParchiNextBtn = document.getElementById('feat8ParchiNextBtn');
+        const feat8ParchiPageIndicator = document.getElementById('feat8ParchiPageIndicator');
+        const feat8ParchiPreviewBox = document.getElementById('feat8ParchiPreviewBox');
+
+        // Sub-Tab 2 (Color Parchi) Elements
+        const feat8ColorLayoutSelect = document.getElementById('feat8ColorLayoutSelect');
+        const feat8CandidateNameInput = document.getElementById('feat8CandidateNameInput');
+        const feat8HeaderPrefixInput = document.getElementById('feat8HeaderPrefixInput');
+        const feat8WardBadgeInput = document.getElementById('feat8WardBadgeInput');
+        const feat8ButtonNoInput = document.getElementById('feat8ButtonNoInput');
+        const feat8SloganInput = document.getElementById('feat8SloganInput');
+        const feat8SymbolSelect = document.getElementById('feat8SymbolSelect');
+        const feat8PhotoFileInput = document.getElementById('feat8PhotoFileInput');
+        const feat8ColorRefreshBtn = document.getElementById('feat8ColorRefreshBtn');
+        const feat8ColorPrintBtn = document.getElementById('feat8ColorPrintBtn');
+        const feat8ColorPdfBtn = document.getElementById('feat8ColorPdfBtn');
+        const feat8ColorPrevBtn = document.getElementById('feat8ColorPrevBtn');
+        const feat8ColorNextBtn = document.getElementById('feat8ColorNextBtn');
+        const feat8ColorPageIndicator = document.getElementById('feat8ColorPageIndicator');
+        const feat8ColorPreviewBox = document.getElementById('feat8ColorPreviewBox');
+
+        // Sub-Tab 3 (Alpha) Elements
+        const feat8AlphaWardSelect = document.getElementById('feat8AlphaWardSelect');
+        const feat8AlphaRefreshBtn = document.getElementById('feat8AlphaRefreshBtn');
+        const feat8AlphaPrintBtn = document.getElementById('feat8AlphaPrintBtn');
+        const feat8AlphaPdfBtn = document.getElementById('feat8AlphaPdfBtn');
+        const feat8AlphaExcelBtn = document.getElementById('feat8AlphaExcelBtn');
+        const feat8AlphaPrevBtn = document.getElementById('feat8AlphaPrevBtn');
+        const feat8AlphaNextBtn = document.getElementById('feat8AlphaNextBtn');
+        const feat8AlphaPageIndicator = document.getElementById('feat8AlphaPageIndicator');
+        const feat8AlphaPreviewBox = document.getElementById('feat8AlphaPreviewBox');
+
+        // Sub-Tab 4 (Family) Elements
+        const feat8FamilyWardSelect = document.getElementById('feat8FamilyWardSelect');
+        const feat8FamilyMinSizeSelect = document.getElementById('feat8FamilyMinSizeSelect');
+        const feat8FamilyRefreshBtn = document.getElementById('feat8FamilyRefreshBtn');
+        const feat8FamilyPrintBtn = document.getElementById('feat8FamilyPrintBtn');
+        const feat8FamilyPdfBtn = document.getElementById('feat8FamilyPdfBtn');
+        const feat8FamilyExcelBtn = document.getElementById('feat8FamilyExcelBtn');
+        const feat8FamilyPrevBtn = document.getElementById('feat8FamilyPrevBtn');
+        const feat8FamilyNextBtn = document.getElementById('feat8FamilyNextBtn');
+        const feat8FamilyPageIndicator = document.getElementById('feat8FamilyPageIndicator');
+        const feat8FamilyPreviewBox = document.getElementById('feat8FamilyPreviewBox');
+
+        // Feature 8 State
+        const f8State = {
+            sessionId: null,
+            totalScanned: 0,
+            totalVoters: 0,
+            activeCount: 0,
+            deletedCount: 0,
+            panchayatName: '',
+            boothAddress: '',
+            jilaParishad: '',
+            panchayatSamiti: '',
+            wards: [],
+            activeSubTab: 'parchi',
+            parchiPage: 1,
+            parchiTotalPages: 1,
+            colorPage: 1,
+            colorTotalPages: 1,
+            alphaPage: 1,
+            alphaTotalPages: 1,
+            familyPage: 1,
+            familyTotalPages: 1,
+            uploadedPhotoDataUrl: null,
+            uploadedSymbolDataUrl: null,
+            chosenFiles: []
+        };
+
+        // 1. Drag & Drop & Multiple File Selection
+        if (feat8DropZone && feat8FileInput) {
+            feat8DropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                feat8DropZone.classList.add('border-emerald-500', 'bg-emerald-50/50');
+            });
+            feat8DropZone.addEventListener('dragleave', () => {
+                feat8DropZone.classList.remove('border-emerald-500', 'bg-emerald-50/50');
+            });
+            feat8DropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                feat8DropZone.classList.remove('border-emerald-500', 'bg-emerald-50/50');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    feat8FileInput.files = e.dataTransfer.files;
+                    handleFilesSelected(e.dataTransfer.files);
+                }
+            });
+            feat8FileInput.addEventListener('change', () => {
+                if (feat8FileInput.files && feat8FileInput.files.length > 0) {
+                    handleFilesSelected(feat8FileInput.files);
+                }
+            });
+        }
+
+        function handleFilesSelected(files) {
+            f8State.chosenFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+            if (f8State.chosenFiles.length === 0) {
+                alert('कृपया केवल .pdf फ़ाइलें चुनें');
+                return;
+            }
+            if (feat8FileSelectedBox) {
+                feat8FileSelectedBox.classList.remove('hidden');
+                feat8FileSelectedBox.classList.add('flex');
+            }
+            if (feat8SelectedFileName) {
+                if (f8State.chosenFiles.length === 1) {
+                    feat8SelectedFileName.textContent = f8State.chosenFiles[0].name;
+                } else {
+                    feat8SelectedFileName.textContent = `${f8State.chosenFiles[0].name} और ${f8State.chosenFiles.length - 1} अन्य PDF फ़ाइलें`;
+                }
+            }
+            if (feat8SelectedFileSize) {
+                feat8SelectedFileSize.textContent = `${f8State.chosenFiles.length} फ़ाइलें`;
+            }
+        }
+
+        // 2. Start Process Button Handler
+        if (feat8StartProcessBtn) {
+            feat8StartProcessBtn.addEventListener('click', async () => {
+                if (f8State.chosenFiles.length === 0) {
+                    alert('कृपया कम से कम एक .pdf मतदाता सूची चुनें');
+                    return;
+                }
+
+                feat8StartProcessBtn.disabled = true;
+                if (feat8ProcessingBox) {
+                    feat8ProcessingBox.classList.remove('hidden');
+                    feat8ProcessMsg.textContent = `${f8State.chosenFiles.length} PDF फ़ाइलों से सक्रिय मतदाता निकाले जा रहे हैं (विलोपित स्वतः Skip होंगे)...`;
+                }
+
+                const formData = new FormData();
+                f8State.chosenFiles.forEach(file => {
+                    formData.append('pdf_files', file);
+                });
+
+                try {
+                    const response = await fetch('/api/feature8/upload_pdf', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'पीडीएफ प्रोसेस करने में त्रुटि');
+                    }
+
+                    const data = await response.json();
+                    applyFeature8Data(data);
+                } catch (err) {
+                    alert('त्रुटि: ' + err.message);
+                } finally {
+                    feat8StartProcessBtn.disabled = false;
+                    if (feat8ProcessingBox) feat8ProcessingBox.classList.add('hidden');
+                }
+            });
+        }
+
+        // 3. Load from Session Button Handler
+        if (feat8LoadSessionBtn) {
+            feat8LoadSessionBtn.addEventListener('click', async () => {
+                feat8LoadSessionBtn.disabled = true;
+                if (feat8ProcessingBox) {
+                    feat8ProcessingBox.classList.remove('hidden');
+                    feat8ProcessMsg.textContent = 'वर्तमान सत्र (Feature 1) से डेटा लोड किया जा रहा है...';
+                }
+
+                try {
+                    const response = await fetch('/api/feature8/from_session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ session_id: (typeof state !== 'undefined' ? state.sessionId : null) })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'सत्र डेटा प्राप्त नहीं हो सका');
+                    }
+
+                    const data = await response.json();
+                    applyFeature8Data(data);
+                } catch (err) {
+                    alert('सूचना: ' + err.message);
+                } finally {
+                    feat8LoadSessionBtn.disabled = false;
+                    if (feat8ProcessingBox) feat8ProcessingBox.classList.add('hidden');
+                }
+            });
+        }
+
+        // 4. Apply Processed Data into State & UI
+        function applyFeature8Data(data) {
+            f8State.sessionId = data.session_id;
+            f8State.totalScanned = data.total_scanned || 0;
+            f8State.totalVoters = data.total_voters || 0;
+            f8State.activeCount = data.active_count || 0;
+            f8State.deletedCount = data.deleted_count || 0;
+            f8State.panchayatName = data.default_panchayat_name || 'ग्राम पंचायत';
+            f8State.boothAddress = data.default_booth_address || '';
+            f8State.jilaParishad = data.default_jila_parishad || '';
+            f8State.panchayatSamiti = data.default_panchayat_samiti || '';
+            f8State.wards = data.wards || ['1'];
+
+            // Update Statistics Card
+            if (feat8StatPanchayat) feat8StatPanchayat.textContent = f8State.panchayatName;
+            if (feat8StatActive) feat8StatActive.textContent = f8State.activeCount.toLocaleString('hi-IN');
+            if (feat8StatDeleted) feat8StatDeleted.textContent = f8State.deletedCount.toLocaleString('hi-IN');
+            if (feat8StatWards) feat8StatWards.textContent = `${f8State.wards.length} वार्ड्स`;
+            if (feat8StatJp) feat8StatJp.textContent = f8State.jilaParishad || '-';
+            if (feat8StatPs) feat8StatPs.textContent = f8State.panchayatSamiti || '-';
+            if (feat8DeletedBadge) feat8DeletedBadge.textContent = `${f8State.deletedCount} विलोपित वोटर Skip किए गए`;
+
+            // Update Editable Global Inputs
+            if (feat8PanchayatInput) feat8PanchayatInput.value = f8State.panchayatName;
+            if (feat8JilaParishadInput) feat8JilaParishadInput.value = f8State.jilaParishad;
+            if (feat8PanchayatSamitiInput) feat8PanchayatSamitiInput.value = f8State.panchayatSamiti;
+
+            // Populate Ward Dropdowns for Alpha and Family
+            populateWardSelects(f8State.wards);
+
+            // Show Stats Card & Controls
+            if (feat8StatsCard) {
+                feat8StatsCard.classList.remove('hidden');
+            }
+
+            // Trigger preview for current sub-tab
+            switchFeat8SubTab(f8State.activeSubTab);
+        }
+
+        function populateWardSelects(wards) {
+            const selects = [feat8AlphaWardSelect, feat8FamilyWardSelect];
+            selects.forEach(sel => {
+                if (!sel) return;
+                sel.innerHTML = '<option value="all" selected>सभी वार्ड्स (All Wards)</option>';
+                wards.forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w;
+                    opt.textContent = `वार्ड ${w}`;
+                    sel.appendChild(opt);
+                });
+            });
+        }
+
+        // 5. Sub-Tab Switcher
+        function switchFeat8SubTab(tabName) {
+            f8State.activeSubTab = tabName;
+            const tabs = [
+                { id: 'parchi', btn: feat8SubTabParchiBtn, panel: feat8PanelParchi, color: 'text-indigo-900' },
+                { id: 'color', btn: feat8SubTabColorBtn, panel: feat8PanelColor, color: 'text-rose-900' },
+                { id: 'alpha', btn: feat8SubTabAlphaBtn, panel: feat8PanelAlpha, color: 'text-amber-900' },
+                { id: 'family', btn: feat8SubTabFamilyBtn, panel: feat8PanelFamily, color: 'text-purple-900' }
+            ];
+
+            tabs.forEach(t => {
+                if (t.panel) {
+                    if (t.id === tabName) t.panel.classList.remove('hidden');
+                    else t.panel.classList.add('hidden');
+                }
+                if (t.btn) {
+                    if (t.id === tabName) {
+                        t.btn.className = `flex-1 min-w-[150px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition cursor-pointer shadow-xs bg-white ${t.color} border border-slate-200`;
+                    } else {
+                        t.btn.className = 'flex-1 min-w-[150px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-white/70';
+                    }
+                }
+            });
+
+            if (f8State.sessionId) {
+                if (tabName === 'parchi') fetchFeat8ParchiPreview();
+                else if (tabName === 'color') fetchFeat8ColorPreview();
+                else if (tabName === 'alpha') fetchFeat8AlphaPreview();
+                else if (tabName === 'family') fetchFeat8FamilyPreview();
+            }
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        if (feat8SubTabParchiBtn) feat8SubTabParchiBtn.addEventListener('click', () => switchFeat8SubTab('parchi'));
+        if (feat8SubTabColorBtn) feat8SubTabColorBtn.addEventListener('click', () => switchFeat8SubTab('color'));
+        if (feat8SubTabAlphaBtn) feat8SubTabAlphaBtn.addEventListener('click', () => switchFeat8SubTab('alpha'));
+        if (feat8SubTabFamilyBtn) feat8SubTabFamilyBtn.addEventListener('click', () => switchFeat8SubTab('family'));
+
+        // 6. Sub-Tab 1: Plain Parchi Handlers
+        async function fetchFeat8ParchiPreview() {
+            if (!f8State.sessionId) return;
+            if (feat8ParchiPreviewBox) {
+                feat8ParchiPreviewBox.innerHTML = '<div class="flex items-center gap-2 text-xs text-indigo-700 font-bold p-8"><div class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div><span>सादा पर्ची प्रीव्यू लोड हो रहा है...</span></div>';
+            }
+
+            try {
+                const layout = feat8ParchiLayoutSelect ? feat8ParchiLayoutSelect.value : '12';
+                const showPage = feat8ParchiShowPageNumCheck ? feat8ParchiShowPageNumCheck.checked : true;
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                const res = await fetch('/api/parchi/preview_html', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: f8State.sessionId,
+                        panchayat_name: pName,
+                        voting_time: vTime,
+                        layout_type: layout,
+                        show_page_number: showPage,
+                        jila_parishad: jp,
+                        panchayat_samiti: ps,
+                        page: f8State.parchiPage,
+                        filter_active_only: true
+                    })
+                });
+
+                if (!res.ok) throw new Error('प्रीव्यू लोड विफल');
+                const data = await res.json();
+                f8State.parchiTotalPages = data.total_pages || 1;
+                if (feat8ParchiPageIndicator) {
+                    feat8ParchiPageIndicator.textContent = `पेज ${data.current_page || 1} / ${data.total_pages || 1}`;
+                }
+                if (feat8ParchiPreviewBox) {
+                    feat8ParchiPreviewBox.innerHTML = `<div class="w-full flex justify-center py-2">${data.html}</div>`;
+                }
+            } catch (err) {
+                if (feat8ParchiPreviewBox) {
+                    feat8ParchiPreviewBox.innerHTML = `<div class="p-4 text-xs text-rose-600 font-bold">त्रुटि: ${err.message}</div>`;
+                }
+            }
+        }
+
+        if (feat8ParchiLayoutSelect) feat8ParchiLayoutSelect.addEventListener('change', () => { f8State.parchiPage = 1; fetchFeat8ParchiPreview(); });
+        if (feat8ParchiShowPageNumCheck) feat8ParchiShowPageNumCheck.addEventListener('change', () => fetchFeat8ParchiPreview());
+        if (feat8ParchiRefreshBtn) feat8ParchiRefreshBtn.addEventListener('click', () => fetchFeat8ParchiPreview());
+        if (feat8ParchiPrevBtn) feat8ParchiPrevBtn.addEventListener('click', () => {
+            if (f8State.parchiPage > 1) { f8State.parchiPage--; fetchFeat8ParchiPreview(); }
+        });
+        if (feat8ParchiNextBtn) feat8ParchiNextBtn.addEventListener('click', () => {
+            if (f8State.parchiPage < f8State.parchiTotalPages) { f8State.parchiPage++; fetchFeat8ParchiPreview(); }
+        });
+
+        // Plain Parchi Print & PDF Download
+        if (feat8ParchiPrintBtn) {
+            feat8ParchiPrintBtn.addEventListener('click', () => {
+                if (!f8State.sessionId) return;
+                const layout = feat8ParchiLayoutSelect ? feat8ParchiLayoutSelect.value : '12';
+                const showPage = feat8ParchiShowPageNumCheck ? feat8ParchiShowPageNumCheck.checked : true;
+                const pName = encodeURIComponent(feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName);
+                const vTime = encodeURIComponent(feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक');
+                const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
+                const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
+                const printUrl = `/parchi/print?session_id=${f8State.sessionId}&panchayat_name=${pName}&voting_time=${vTime}&layout_type=${layout}&show_page_number=${showPage}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+                window.open(printUrl, '_blank');
+            });
+        }
+
+        if (feat8ParchiPdfBtn) {
+            feat8ParchiPdfBtn.addEventListener('click', async () => {
+                if (!f8State.sessionId) return;
+                feat8ParchiPdfBtn.disabled = true;
+                const origText = feat8ParchiPdfBtn.innerHTML;
+                feat8ParchiPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रहा है...</span>';
+                if (window.lucide) lucide.createIcons();
+
+                const layout = feat8ParchiLayoutSelect ? feat8ParchiLayoutSelect.value : '12';
+                const showPage = feat8ParchiShowPageNumCheck ? feat8ParchiShowPageNumCheck.checked : true;
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                try {
+                    const response = await fetch('/api/parchi/export_pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: f8State.sessionId,
+                            panchayat_name: pName,
+                            voting_time: vTime,
+                            filter_active_only: true,
+                            layout_type: layout,
+                            show_page_number: showPage,
+                            jila_parishad: jp,
+                            panchayat_samiti: ps
+                        })
+                    });
+
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        if (data.fallback_print && data.print_url) {
+                            window.open(data.print_url, '_blank');
+                            return;
+                        }
+                        if (!response.ok) throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+
+                    if (!response.ok) throw new Error('PDF तैयार करने में विफल');
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Matdata_Parchi_${pName.replace(/\s+/g, '_')}_A4_${layout}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('त्रुटि: ' + err.message);
+                } finally {
+                    feat8ParchiPdfBtn.disabled = false;
+                    feat8ParchiPdfBtn.innerHTML = origText;
+                    if (window.lucide) lucide.createIcons();
+                }
+            });
+        }
+
+        // 7. Sub-Tab 2: Color Parchi Handlers
+        if (feat8PhotoFileInput) {
+            feat8PhotoFileInput.addEventListener('change', () => {
+                const file = feat8PhotoFileInput.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        f8State.uploadedPhotoDataUrl = e.target.result;
+                        fetchFeat8ColorPreview();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        async function fetchFeat8ColorPreview() {
+            if (!f8State.sessionId) return;
+            if (feat8ColorPreviewBox) {
+                feat8ColorPreviewBox.innerHTML = '<div class="flex items-center gap-2 text-xs text-rose-700 font-bold p-8"><div class="w-4 h-4 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div><span>कलर पर्ची प्रीव्यू लोड हो रहा है...</span></div>';
+            }
+
+            try {
+                const layout = feat8ColorLayoutSelect ? feat8ColorLayoutSelect.value : '8';
+                const candName = feat8CandidateNameInput ? feat8CandidateNameInput.value.trim() : 'संजय कुमार मेवाड़ा';
+                const headerPrefix = feat8HeaderPrefixInput ? feat8HeaderPrefixInput.value.trim() : 'पार्षद पद हेतु वार्ड नं';
+                const wardBadge = feat8WardBadgeInput ? feat8WardBadgeInput.value.trim() : '03';
+                const buttonNo = feat8ButtonNoInput ? feat8ButtonNoInput.value.trim() : '2';
+                const slogan = feat8SloganInput ? feat8SloganInput.value.trim() : 'को हाथ के निशान पर बटन दबा कर विजयी बनावें।';
+                const sym = feat8SymbolSelect ? feat8SymbolSelect.value : 'hand';
+                const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                const candidateInfo = {
+                    candidate_name: candName,
+                    header_prefix: headerPrefix,
+                    ward_badge: wardBadge,
+                    header_suffix: 'से लोकप्रिय प्रत्याशी',
+                    button_no: buttonNo,
+                    slogan: slogan,
+                    symbol_preset: sym,
+                    custom_symbol_data: f8State.uploadedSymbolDataUrl,
+                    candidate_photo_data: f8State.uploadedPhotoDataUrl,
+                    voting_time: vTime,
+                    jila_parishad: jp,
+                    panchayat_samiti: ps
+                };
+
+                const res = await fetch('/api/color_parchi/preview_html', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: f8State.sessionId,
+                        candidate_info: candidateInfo,
+                        layout_type: layout,
+                        show_page_number: true,
+                        filter_active_only: true,
+                        page: f8State.colorPage
+                    })
+                });
+
+                if (!res.ok) throw new Error('प्रीव्यू लोड विफल');
+                const data = await res.json();
+                f8State.colorTotalPages = data.total_pages || 1;
+                if (feat8ColorPageIndicator) {
+                    feat8ColorPageIndicator.textContent = `पेज ${data.current_page || 1} / ${data.total_pages || 1}`;
+                }
+                if (feat8ColorPreviewBox) {
+                    feat8ColorPreviewBox.innerHTML = `<div class="w-full flex justify-center py-2">${data.html}</div>`;
+                }
+            } catch (err) {
+                if (feat8ColorPreviewBox) {
+                    feat8ColorPreviewBox.innerHTML = `<div class="p-4 text-xs text-rose-600 font-bold">त्रुटि: ${err.message}</div>`;
+                }
+            }
+        }
+
+        if (feat8ColorLayoutSelect) feat8ColorLayoutSelect.addEventListener('change', () => { f8State.colorPage = 1; fetchFeat8ColorPreview(); });
+        if (feat8SymbolSelect) feat8SymbolSelect.addEventListener('change', () => fetchFeat8ColorPreview());
+        if (feat8ColorRefreshBtn) feat8ColorRefreshBtn.addEventListener('click', () => fetchFeat8ColorPreview());
+        if (feat8ColorPrevBtn) feat8ColorPrevBtn.addEventListener('click', () => {
+            if (f8State.colorPage > 1) { f8State.colorPage--; fetchFeat8ColorPreview(); }
+        });
+        if (feat8ColorNextBtn) feat8ColorNextBtn.addEventListener('click', () => {
+            if (f8State.colorPage < f8State.colorTotalPages) { f8State.colorPage++; fetchFeat8ColorPreview(); }
+        });
+
+        // Color Parchi Print & PDF Download
+        if (feat8ColorPrintBtn) {
+            feat8ColorPrintBtn.addEventListener('click', async () => {
+                if (!f8State.sessionId) return;
+                const layout = feat8ColorLayoutSelect ? feat8ColorLayoutSelect.value : '8';
+                const candName = encodeURIComponent(feat8CandidateNameInput ? feat8CandidateNameInput.value.trim() : 'संजय कुमार मेवाड़ा');
+                const headerPrefix = encodeURIComponent(feat8HeaderPrefixInput ? feat8HeaderPrefixInput.value.trim() : 'पार्षद पद हेतु वार्ड नं');
+                const wardBadge = encodeURIComponent(feat8WardBadgeInput ? feat8WardBadgeInput.value.trim() : '03');
+                const buttonNo = encodeURIComponent(feat8ButtonNoInput ? feat8ButtonNoInput.value.trim() : '2');
+                const slogan = encodeURIComponent(feat8SloganInput ? feat8SloganInput.value.trim() : 'को हाथ के निशान पर बटन दबा कर विजयी बनावें।');
+                const sym = encodeURIComponent(feat8SymbolSelect ? feat8SymbolSelect.value : 'hand');
+                const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
+                const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
+                const vTime = encodeURIComponent(feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक');
+
+                // Save custom candidate info in backend session first
+                await fetch('/api/color_parchi/preview_html', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: f8State.sessionId,
+                        candidate_info: {
+                            candidate_name: feat8CandidateNameInput ? feat8CandidateNameInput.value.trim() : 'संजय कुमार मेवाड़ा',
+                            header_prefix: feat8HeaderPrefixInput ? feat8HeaderPrefixInput.value.trim() : 'पार्षद पद हेतु वार्ड नं',
+                            ward_badge: feat8WardBadgeInput ? feat8WardBadgeInput.value.trim() : '03',
+                            header_suffix: 'से लोकप्रिय प्रत्याशी',
+                            button_no: feat8ButtonNoInput ? feat8ButtonNoInput.value.trim() : '2',
+                            slogan: feat8SloganInput ? feat8SloganInput.value.trim() : 'को हाथ के निशान पर बटन दबा कर विजयी बनावें।',
+                            symbol_preset: feat8SymbolSelect ? feat8SymbolSelect.value : 'hand',
+                            custom_symbol_data: f8State.uploadedSymbolDataUrl,
+                            candidate_photo_data: f8State.uploadedPhotoDataUrl,
+                            voting_time: feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक',
+                            jila_parishad: feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad,
+                            panchayat_samiti: feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti
+                        },
+                        layout_type: layout,
+                        show_page_number: true,
+                        filter_active_only: true,
+                        page: 1
+                    })
+                });
+
+                const printUrl = `/color_parchi/print?session_id=${f8State.sessionId}&layout_type=${layout}&show_page_number=true&filter_active_only=true&candidate_name=${candName}&header_prefix=${headerPrefix}&ward_badge=${wardBadge}&button_no=${buttonNo}&slogan=${slogan}&symbol_preset=${sym}&jila_parishad=${jp}&panchayat_samiti=${ps}&voting_time=${vTime}`;
+                window.open(printUrl, '_blank');
+            });
+        }
+
+        if (feat8ColorPdfBtn) {
+            feat8ColorPdfBtn.addEventListener('click', async () => {
+                if (!f8State.sessionId) return;
+                feat8ColorPdfBtn.disabled = true;
+                const origText = feat8ColorPdfBtn.innerHTML;
+                feat8ColorPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रहा है...</span>';
+                if (window.lucide) lucide.createIcons();
+
+                const layout = feat8ColorLayoutSelect ? feat8ColorLayoutSelect.value : '8';
+                const candName = feat8CandidateNameInput ? feat8CandidateNameInput.value.trim() : 'संजय कुमार मेवाड़ा';
+                const headerPrefix = feat8HeaderPrefixInput ? feat8HeaderPrefixInput.value.trim() : 'पार्षद पद हेतु वार्ड नं';
+                const wardBadge = feat8WardBadgeInput ? feat8WardBadgeInput.value.trim() : '03';
+                const buttonNo = feat8ButtonNoInput ? feat8ButtonNoInput.value.trim() : '2';
+                const slogan = feat8SloganInput ? feat8SloganInput.value.trim() : 'को हाथ के निशान पर बटन दबा कर विजयी बनावें।';
+                const sym = feat8SymbolSelect ? feat8SymbolSelect.value : 'hand';
+                const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                const candidateInfo = {
+                    candidate_name: candName,
+                    header_prefix: headerPrefix,
+                    ward_badge: wardBadge,
+                    header_suffix: 'से लोकप्रिय प्रत्याशी',
+                    button_no: buttonNo,
+                    slogan: slogan,
+                    symbol_preset: sym,
+                    custom_symbol_data: f8State.uploadedSymbolDataUrl,
+                    candidate_photo_data: f8State.uploadedPhotoDataUrl,
+                    voting_time: vTime,
+                    jila_parishad: jp,
+                    panchayat_samiti: ps
+                };
+
+                try {
+                    const response = await fetch('/api/color_parchi/export_pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: f8State.sessionId,
+                            candidate_info: candidateInfo,
+                            layout_type: layout,
+                            show_page_number: true,
+                            filter_active_only: true
+                        })
+                    });
+
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        if (data.fallback_print && data.print_url) {
+                            window.open(data.print_url, '_blank');
+                            return;
+                        }
+                        if (!response.ok) throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+
+                    if (!response.ok) throw new Error('PDF तैयार करने में विफल');
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Color_Parchi_${candName.replace(/\s+/g, '_')}_A4_${layout}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('त्रुटि: ' + err.message);
+                } finally {
+                    feat8ColorPdfBtn.disabled = false;
+                    feat8ColorPdfBtn.innerHTML = origText;
+                    if (window.lucide) lucide.createIcons();
+                }
+            });
+        }
+
+        // 8. Sub-Tab 3: Alphabetical List Handlers
+        async function fetchFeat8AlphaPreview() {
+            if (!f8State.sessionId) return;
+            if (feat8AlphaPreviewBox) {
+                feat8AlphaPreviewBox.innerHTML = '<div class="flex items-center gap-2 text-xs text-amber-800 font-bold p-8"><div class="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div><span>अल्फाबेटिक लिस्ट प्रीव्यू लोड हो रहा है...</span></div>';
+            }
+
+            try {
+                const ward = feat8AlphaWardSelect ? feat8AlphaWardSelect.value : 'all';
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                const res = await fetch('/api/alphabetical/preview_html', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: f8State.sessionId,
+                        selected_ward: ward,
+                        ward_title: pName,
+                        part_no: ward !== 'all' ? ward : '1',
+                        booth_address: f8State.boothAddress,
+                        list_title: 'अल्फाबेटिक ABCD से वोटर लिस्ट',
+                        filter_active_only: true,
+                        jila_parishad: jp,
+                        panchayat_samiti: ps,
+                        page: f8State.alphaPage
+                    })
+                });
+
+                if (!res.ok) throw new Error('प्रीव्यू लोड विफल');
+                const data = await res.json();
+                f8State.alphaTotalPages = data.total_pages || 1;
+                if (feat8AlphaPageIndicator) {
+                    feat8AlphaPageIndicator.textContent = `पेज ${data.current_page || 1} / ${data.total_pages || 1}`;
+                }
+                if (feat8AlphaPreviewBox) {
+                    feat8AlphaPreviewBox.innerHTML = `<div class="w-full flex justify-center py-2">${data.html}</div>`;
+                }
+            } catch (err) {
+                if (feat8AlphaPreviewBox) {
+                    feat8AlphaPreviewBox.innerHTML = `<div class="p-4 text-xs text-rose-600 font-bold">त्रुटि: ${err.message}</div>`;
+                }
+            }
+        }
+
+        if (feat8AlphaWardSelect) feat8AlphaWardSelect.addEventListener('change', () => { f8State.alphaPage = 1; fetchFeat8AlphaPreview(); });
+        if (feat8AlphaRefreshBtn) feat8AlphaRefreshBtn.addEventListener('click', () => fetchFeat8AlphaPreview());
+        if (feat8AlphaPrevBtn) feat8AlphaPrevBtn.addEventListener('click', () => {
+            if (f8State.alphaPage > 1) { f8State.alphaPage--; fetchFeat8AlphaPreview(); }
+        });
+        if (feat8AlphaNextBtn) feat8AlphaNextBtn.addEventListener('click', () => {
+            if (f8State.alphaPage < f8State.alphaTotalPages) { f8State.alphaPage++; fetchFeat8AlphaPreview(); }
+        });
+
+        if (feat8AlphaPrintBtn) {
+            feat8AlphaPrintBtn.addEventListener('click', () => {
+                if (!f8State.sessionId) return;
+                const ward = feat8AlphaWardSelect ? feat8AlphaWardSelect.value : 'all';
+                const pName = encodeURIComponent(feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName);
+                const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
+                const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
+                const printUrl = `/alphabetical/print?session_id=${f8State.sessionId}&selected_ward=${ward}&ward_title=${pName}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+                window.open(printUrl, '_blank');
+            });
+        }
+
+        if (feat8AlphaPdfBtn) {
+            feat8AlphaPdfBtn.addEventListener('click', async () => {
+                if (!f8State.sessionId) return;
+                feat8AlphaPdfBtn.disabled = true;
+                const origText = feat8AlphaPdfBtn.innerHTML;
+                feat8AlphaPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रहा है...</span>';
+                if (window.lucide) lucide.createIcons();
+
+                const ward = feat8AlphaWardSelect ? feat8AlphaWardSelect.value : 'all';
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                try {
+                    const response = await fetch('/api/alphabetical/export_pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: f8State.sessionId,
+                            selected_ward: ward,
+                            ward_title: pName,
+                            part_no: ward !== 'all' ? ward : '1',
+                            booth_address: f8State.boothAddress,
+                            list_title: 'अल्फाबेटिक ABCD से वोटर लिस्ट',
+                            filter_active_only: true,
+                            jila_parishad: jp,
+                            panchayat_samiti: ps
+                        })
+                    });
+
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        if (data.fallback_print && data.print_url) {
+                            window.open(data.print_url, '_blank');
+                            return;
+                        }
+                        if (!response.ok) throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+
+                    if (!response.ok) throw new Error('PDF तैयार करने में विफल');
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Alphabetical_List_${pName.replace(/\s+/g, '_')}_Ward_${ward}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('त्रुटि: ' + err.message);
+                } finally {
+                    feat8AlphaPdfBtn.disabled = false;
+                    feat8AlphaPdfBtn.innerHTML = origText;
+                    if (window.lucide) lucide.createIcons();
+                }
+            });
+        }
+
+        if (feat8AlphaExcelBtn) {
+            feat8AlphaExcelBtn.addEventListener('click', async () => {
+                if (!f8State.sessionId) return;
+                const ward = feat8AlphaWardSelect ? feat8AlphaWardSelect.value : 'all';
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+
+                try {
+                    const res = await fetch('/api/alphabetical/export_excel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: f8State.sessionId,
+                            selected_ward: ward,
+                            ward_title: pName
+                        })
+                    });
+
+                    if (!res.ok) throw new Error('Excel डाउनलोड विफल');
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Alphabetical_${pName.replace(/\s+/g, '_')}_Ward_${ward}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('त्रुटि: ' + err.message);
+                }
+            });
+        }
+
+        // 9. Sub-Tab 4: Family List Handlers
+        async function fetchFeat8FamilyPreview() {
+            if (!f8State.sessionId) return;
+            if (feat8FamilyPreviewBox) {
+                feat8FamilyPreviewBox.innerHTML = '<div class="flex items-center gap-2 text-xs text-purple-800 font-bold p-8"><div class="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div><span>बड़े परिवारों की लिस्ट प्रीव्यू लोड हो रहा है...</span></div>';
+            }
+
+            try {
+                const ward = feat8FamilyWardSelect ? feat8FamilyWardSelect.value : 'all';
+                const minSize = feat8FamilyMinSizeSelect ? parseInt(feat8FamilyMinSizeSelect.value) : 2;
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                const res = await fetch('/api/family/preview_html', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: f8State.sessionId,
+                        selected_ward: ward,
+                        min_family_size: minSize,
+                        ignore_zero_houses: true,
+                        ward_title: pName,
+                        part_no: ward !== 'all' ? ward : '1',
+                        booth_address: f8State.boothAddress,
+                        list_title: 'बड़े-घर की लिस्ट',
+                        filter_active_only: true,
+                        jila_parishad: jp,
+                        panchayat_samiti: ps,
+                        page: f8State.familyPage
+                    })
+                });
+
+                if (!res.ok) throw new Error('प्रीव्यू लोड विफल');
+                const data = await res.json();
+                f8State.familyTotalPages = data.total_pages || 1;
+                if (feat8FamilyPageIndicator) {
+                    feat8FamilyPageIndicator.textContent = `पेज ${data.current_page || 1} / ${data.total_pages || 1}`;
+                }
+                if (feat8FamilyPreviewBox) {
+                    feat8FamilyPreviewBox.innerHTML = `<div class="w-full flex justify-center py-2">${data.html}</div>`;
+                }
+            } catch (err) {
+                if (feat8FamilyPreviewBox) {
+                    feat8FamilyPreviewBox.innerHTML = `<div class="p-4 text-xs text-rose-600 font-bold">त्रुटि: ${err.message}</div>`;
+                }
+            }
+        }
+
+        if (feat8FamilyWardSelect) feat8FamilyWardSelect.addEventListener('change', () => { f8State.familyPage = 1; fetchFeat8FamilyPreview(); });
+        if (feat8FamilyMinSizeSelect) feat8FamilyMinSizeSelect.addEventListener('change', () => { f8State.familyPage = 1; fetchFeat8FamilyPreview(); });
+        if (feat8FamilyRefreshBtn) feat8FamilyRefreshBtn.addEventListener('click', () => fetchFeat8FamilyPreview());
+        if (feat8FamilyPrevBtn) feat8FamilyPrevBtn.addEventListener('click', () => {
+            if (f8State.familyPage > 1) { f8State.familyPage--; fetchFeat8FamilyPreview(); }
+        });
+        if (feat8FamilyNextBtn) feat8FamilyNextBtn.addEventListener('click', () => {
+            if (f8State.familyPage < f8State.familyTotalPages) { f8State.familyPage++; fetchFeat8FamilyPreview(); }
+        });
+
+        if (feat8FamilyPrintBtn) {
+            feat8FamilyPrintBtn.addEventListener('click', () => {
+                if (!f8State.sessionId) return;
+                const ward = feat8FamilyWardSelect ? feat8FamilyWardSelect.value : 'all';
+                const minSize = feat8FamilyMinSizeSelect ? parseInt(feat8FamilyMinSizeSelect.value) : 2;
+                const pName = encodeURIComponent(feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName);
+                const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
+                const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
+                const printUrl = `/family/print?session_id=${f8State.sessionId}&selected_ward=${ward}&min_family_size=${minSize}&ward_title=${pName}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+                window.open(printUrl, '_blank');
+            });
+        }
+
+        if (feat8FamilyPdfBtn) {
+            feat8FamilyPdfBtn.addEventListener('click', async () => {
+                if (!f8State.sessionId) return;
+                feat8FamilyPdfBtn.disabled = true;
+                const origText = feat8FamilyPdfBtn.innerHTML;
+                feat8FamilyPdfBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>PDF जनरेट हो रहा है...</span>';
+                if (window.lucide) lucide.createIcons();
+
+                const ward = feat8FamilyWardSelect ? feat8FamilyWardSelect.value : 'all';
+                const minSize = feat8FamilyMinSizeSelect ? parseInt(feat8FamilyMinSizeSelect.value) : 2;
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
+                const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+
+                try {
+                    const response = await fetch('/api/family/export_pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: f8State.sessionId,
+                            selected_ward: ward,
+                            min_family_size: minSize,
+                            ignore_zero_houses: true,
+                            ward_title: pName,
+                            part_no: ward !== 'all' ? ward : '1',
+                            booth_address: f8State.boothAddress,
+                            list_title: 'बड़े-घर की लिस्ट',
+                            filter_active_only: true,
+                            jila_parishad: jp,
+                            panchayat_samiti: ps
+                        })
+                    });
+
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        if (data.fallback_print && data.print_url) {
+                            window.open(data.print_url, '_blank');
+                            return;
+                        }
+                        if (!response.ok) throw new Error(data.error || 'PDF डाउनलोड विफल');
+                    }
+
+                    if (!response.ok) throw new Error('PDF तैयार करने में विफल');
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Family_List_${pName.replace(/\s+/g, '_')}_Ward_${ward}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('त्रुटि: ' + err.message);
+                } finally {
+                    feat8FamilyPdfBtn.disabled = false;
+                    feat8FamilyPdfBtn.innerHTML = origText;
+                    if (window.lucide) lucide.createIcons();
+                }
+            });
+        }
+
+        if (feat8FamilyExcelBtn) {
+            feat8FamilyExcelBtn.addEventListener('click', async () => {
+                if (!f8State.sessionId) return;
+                const ward = feat8FamilyWardSelect ? feat8FamilyWardSelect.value : 'all';
+                const minSize = feat8FamilyMinSizeSelect ? parseInt(feat8FamilyMinSizeSelect.value) : 2;
+                const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+
+                try {
+                    const res = await fetch('/api/family/export_excel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: f8State.sessionId,
+                            selected_ward: ward,
+                            min_family_size: minSize,
+                            ward_title: pName
+                        })
+                    });
+
+                    if (!res.ok) throw new Error('Excel डाउनलोड विफल');
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Family_${pName.replace(/\s+/g, '_')}_Ward_${ward}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('त्रुटि: ' + err.message);
+                }
+            });
+        }
+    }
+
     // Initialize District Automation
     initDistrictAutomation();
+
+    // Initialize Feature 8: Direct PDF All-in-One Studio
+    initFeature8();
 
     // Initial load of history pills
     refreshHistoryPills();
