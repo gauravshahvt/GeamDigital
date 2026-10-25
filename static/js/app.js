@@ -4986,6 +4986,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Sub-Tab 2 (Color Parchi) Elements
         const feat8ColorLayoutSelect = document.getElementById('feat8ColorLayoutSelect');
+        const feat8PosterFileInput = document.getElementById('feat8PosterFileInput');
+        const feat8PosterEmptyState = document.getElementById('feat8PosterEmptyState');
+        const feat8PosterUploadedState = document.getElementById('feat8PosterUploadedState');
+        const feat8PosterThumbImg = document.getElementById('feat8PosterThumbImg');
+        const feat8PosterFileName = document.getElementById('feat8PosterFileName');
+        const feat8ChangePosterBtn = document.getElementById('feat8ChangePosterBtn');
+        const feat8DeletePosterBtn = document.getElementById('feat8DeletePosterBtn');
+        const feat8PosterActiveBadge = document.getElementById('feat8PosterActiveBadge');
         const feat8CandidateNameInput = document.getElementById('feat8CandidateNameInput');
         const feat8HeaderPrefixInput = document.getElementById('feat8HeaderPrefixInput');
         const feat8WardBadgeInput = document.getElementById('feat8WardBadgeInput');
@@ -5045,6 +5053,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alphaTotalPages: 1,
             familyPage: 1,
             familyTotalPages: 1,
+            uploadedPosterDataUrl: null,
             uploadedPhotoDataUrl: null,
             uploadedSymbolDataUrl: null,
             chosenFiles: []
@@ -5402,6 +5411,94 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 7. Sub-Tab 2: Color Parchi Handlers
+        // Ready-Made Full Poster Upload, Change & Delete Logic for Feature 8
+        if (feat8PosterEmptyState && feat8PosterFileInput) {
+            feat8PosterEmptyState.addEventListener('click', () => {
+                feat8PosterFileInput.click();
+            });
+
+            feat8PosterEmptyState.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                feat8PosterEmptyState.classList.add('border-amber-500', 'bg-amber-100/50');
+            });
+
+            feat8PosterEmptyState.addEventListener('dragleave', () => {
+                feat8PosterEmptyState.classList.remove('border-amber-500', 'bg-amber-100/50');
+            });
+
+            feat8PosterEmptyState.addEventListener('drop', (e) => {
+                e.preventDefault();
+                feat8PosterEmptyState.classList.remove('border-amber-500', 'bg-amber-100/50');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFeat8PosterChosen(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        if (feat8ChangePosterBtn && feat8PosterFileInput) {
+            feat8ChangePosterBtn.addEventListener('click', () => {
+                feat8PosterFileInput.click();
+            });
+        }
+
+        if (feat8PosterFileInput) {
+            feat8PosterFileInput.addEventListener('change', () => {
+                if (feat8PosterFileInput.files && feat8PosterFileInput.files.length > 0) {
+                    handleFeat8PosterChosen(feat8PosterFileInput.files[0]);
+                }
+            });
+        }
+
+        function handleFeat8PosterChosen(file) {
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('कृपया केवल इमेज फ़ाइल (.jpg, .png, .webp) चुनें');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target.result;
+                f8State.uploadedPosterDataUrl = dataUrl;
+
+                if (feat8PosterThumbImg) feat8PosterThumbImg.src = dataUrl;
+                if (feat8PosterFileName) feat8PosterFileName.textContent = `${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+
+                if (feat8PosterEmptyState) feat8PosterEmptyState.classList.add('hidden');
+                if (feat8PosterUploadedState) {
+                    feat8PosterUploadedState.classList.remove('hidden');
+                    feat8PosterUploadedState.classList.add('flex');
+                }
+                if (feat8PosterActiveBadge) {
+                    feat8PosterActiveBadge.classList.remove('hidden');
+                    feat8PosterActiveBadge.classList.add('flex');
+                }
+
+                if (window.lucide) lucide.createIcons();
+                fetchFeat8ColorPreview();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        if (feat8DeletePosterBtn) {
+            feat8DeletePosterBtn.addEventListener('click', () => {
+                f8State.uploadedPosterDataUrl = null;
+                if (feat8PosterFileInput) feat8PosterFileInput.value = '';
+
+                if (feat8PosterUploadedState) {
+                    feat8PosterUploadedState.classList.add('hidden');
+                    feat8PosterUploadedState.classList.remove('flex');
+                }
+                if (feat8PosterEmptyState) feat8PosterEmptyState.classList.remove('hidden');
+                if (feat8PosterActiveBadge) {
+                    feat8PosterActiveBadge.classList.add('hidden');
+                    feat8PosterActiveBadge.classList.remove('flex');
+                }
+
+                fetchFeat8ColorPreview();
+            });
+        }
+
         if (feat8PhotoFileInput) {
             feat8PhotoFileInput.addEventListener('change', () => {
                 const file = feat8PhotoFileInput.files[0];
@@ -5445,6 +5542,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     symbol_preset: sym,
                     custom_symbol_data: f8State.uploadedSymbolDataUrl,
                     candidate_photo_data: f8State.uploadedPhotoDataUrl,
+                    poster_img_data: f8State.uploadedPosterDataUrl,
                     voting_time: vTime,
                     booth_address: bAddr,
                     jila_parishad: jp,
@@ -5524,6 +5622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             symbol_preset: feat8SymbolSelect ? feat8SymbolSelect.value : 'hand',
                             custom_symbol_data: f8State.uploadedSymbolDataUrl,
                             candidate_photo_data: f8State.uploadedPhotoDataUrl,
+                            poster_img_data: f8State.uploadedPosterDataUrl,
                             voting_time: feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक',
                             booth_address: bAddrRaw,
                             jila_parishad: feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad,
@@ -5572,6 +5671,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     symbol_preset: sym,
                     custom_symbol_data: f8State.uploadedSymbolDataUrl,
                     candidate_photo_data: f8State.uploadedPhotoDataUrl,
+                    poster_img_data: f8State.uploadedPosterDataUrl,
                     voting_time: vTime,
                     booth_address: bAddr,
                     jila_parishad: jp,

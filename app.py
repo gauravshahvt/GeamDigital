@@ -1455,6 +1455,8 @@ def color_parchi_print_standalone():
             for k, val in cached_info.items():
                 if val:
                     candidate_info[k] = val
+                elif k in ['poster_img_data', 'custom_symbol_data', 'candidate_photo_data']:
+                    candidate_info[k] = val
         if request.args.get('jila_parishad'):
             candidate_info['jila_parishad'] = request.args.get('jila_parishad')
         if request.args.get('panchayat_samiti'):
