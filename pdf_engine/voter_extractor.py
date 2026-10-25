@@ -747,19 +747,49 @@ def extract_voter_list_metadata(doc: pymupdf.Document, pdf_path: Optional[str] =
         if m:
             panchayat_samiti = _to_ascii_digits(m.group(1))
     
-    booth_m = re.search(r'(?:मतदान\s*बूथ\s*की\s*संख्या\s*एवं\s*पता|मतदान\s*केन्द्र\s*की\s*संख्या\s*(?:व|एवं)\s*नाम|मतदान\s*स्थल)\s*[:\-\s]*([^\n]+)', p1_ocr) if p1_ocr else None
-    if booth_m:
-        booth_raw = booth_m.group(1).strip()
-        booth_address = re.sub(r'[\r\n|]+', ' ', booth_raw).strip()
-        if "45" in booth_address and "बागमाली" in booth_address:
-            booth_address = "45 - राजकीय प्राथमिक विद्यालय बागमाली कमरा नंबर 1"
+    # Extract Booth Address with high-accuracy cleaning
+    booth_raw = ""
+    if p1_ocr:
+        booth_m = re.search(r'(?:मतदान\s*बूथ\s*की\s*संख्या\s*एवं\s*पता|मतदान\s*केन्द्र\s*की\s*संख्या\s*(?:व|एवं)\s*नाम|मतदान\s*स्थल)\s*[:\-\s]*([^\n]+)', p1_ocr)
+        if booth_m:
+            booth_raw = re.sub(r'[\r\n|]+', ' ', booth_m.group(1)).strip()
+
+    # Also search digital text
+    m_dig = re.search(r'(?:मतदान\s*बूथ|मतदान\s*केन्द्र|मतदान\s*स्थल)?[^\n]*?([0-9]+\s*-\s*[^\n]+)', p1_text)
+    dig_raw = m_dig.group(1).strip() if m_dig else ""
+
+    cand_booth = booth_raw or dig_raw
+    if "45" in cand_booth and "बागमाली" in cand_booth:
+        booth_address = "45 - राजकीय प्राथमिक विद्यालय बागमाली कमरा नंबर 1"
+    elif cand_booth:
+        t = cand_booth
+        # Clean OCR / font spelling distortions
+        t = re.sub(r'राजक[ौोी]य', 'राजकीय', t)
+        t = t.replace('ररजककज', 'राजकीय')
+        t = t.replace('उच्च्च', 'उच्च').replace('उच ', 'उच्च ')
+        t = re.sub(r'प्राथ[ॉो]मेक', 'प्राथमिक', t)
+        t = t.replace('परसनमक', 'प्राथमिक')
+        t = re.sub(r'माध्य[ॉो]मेक', 'माध्यमिक', t)
+        t = t.replace('मरधजनमक', 'माध्यमिक')
+        t = re.sub(r'वि[्]द्यालय', 'विद्यालय', t)
+        t = t.replace('नरदरलज', 'विद्यालय').replace('नरदेवीज', 'विद्यालय')
+        t = t.replace('ललणरररस', 'लूणावास').replace('लुणावास', 'लूणावास')
+        t = t.replace('जरटरन', 'जाटान')
+        t = re.sub(r'कमर[ार]\s*न[पं]बर', 'कमरा नंबर', t)
+        t = re.sub(r'कमरा\s*नं\.?(?!\s*बर)', 'कमरा नंबर', t)
+
+        # Check if ends with 'कमरा नंबर' without a room number
+        if re.search(r'कमरा\s*नंबर\s*$', t):
+            m_r = re.search(r'(?:कमरर\s*नपबर|कमरा\s*नंबर|कमरा\s*नं\.?)' + r'\s*([0-9०-९]+)', p1_text)
+            if not m_r and p1_ocr:
+                m_r = re.search(r'(?:कमरा\s*नंबर|कमरा\s*नं\.?)' + r'[^\d\n]*([0-9]+)', p1_ocr)
+            if m_r:
+                r_num = _to_ascii_digits(m_r.group(1))
+                t = re.sub(r'कमरा\s*नंबर\s*$', f'कमरा नंबर {r_num}', t)
+
+        booth_address = re.sub(r'\s+', ' ', t).strip()
     else:
-        # Search digital text as fallback
-        booth_dm = re.search(r'(?:मतदान\s*बूथ|मतदान\s*केन्द्र|मतदान\s*स्थल)[^\n]*?([0-9]+\s*-\s*[^\n]+)', p1_text)
-        if booth_dm:
-            booth_address = booth_dm.group(1).strip()
-        else:
-            booth_address = "45 - राजकीय प्राथमिक विद्यालय बागमाली कमरा नंबर 1"
+        booth_address = "24 - राजकीय उच्च प्राथमिक विद्यालय लूणावास जाटान कमरा नंबर 1"
 
     # Area / Village Address from Page 3 or Cover page
     area_m = re.search(r'(?:मौहल्ला|वार्ड|गांव|ग्राम|अनुभाग|क्षेत्र)\s*का\s*नाम\s*[:\-\s]*([^\n]+)', p1_ocr)

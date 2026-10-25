@@ -836,10 +836,12 @@ def api_parchi_preview_html():
         
         # Override booth address if user customized it
         custom_booth = data.get('booth_address')
-        if custom_booth:
+        if custom_booth and str(custom_booth).strip():
+            clean_b = str(custom_booth).strip()
             for v in voters:
-                if not v.get('booth_address'):
-                    v['booth_address'] = custom_booth
+                v['booth_address'] = clean_b
+            if session_id in PARCHI_CACHE:
+                PARCHI_CACHE[session_id]['parsed']['default_booth_address'] = clean_b
                     
         jp = data.get('jila_parishad') or PARCHI_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         ps = data.get('panchayat_samiti') or PARCHI_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
@@ -892,10 +894,12 @@ def api_parchi_export_pdf():
         
         # Custom booth if provided
         custom_booth = data.get('booth_address')
-        if custom_booth:
+        if custom_booth and str(custom_booth).strip():
+            clean_b = str(custom_booth).strip()
             for v in voters:
-                if not v.get('booth_address'):
-                    v['booth_address'] = custom_booth
+                v['booth_address'] = clean_b
+            if session_id in PARCHI_CACHE:
+                PARCHI_CACHE[session_id]['parsed']['default_booth_address'] = clean_b
                     
         jp = data.get('jila_parishad') or PARCHI_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         ps = data.get('panchayat_samiti') or PARCHI_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
@@ -985,10 +989,10 @@ def parchi_print_standalone():
         range_to = request.args.get('range_to')
         
         custom_booth = request.args.get('booth_address')
-        if custom_booth:
+        if custom_booth and str(custom_booth).strip():
+            clean_b = str(custom_booth).strip()
             for v in voters:
-                if not v.get('booth_address'):
-                    v['booth_address'] = custom_booth
+                v['booth_address'] = clean_b
 
         jp = request.args.get('jila_parishad') or PARCHI_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         ps = request.args.get('panchayat_samiti') or PARCHI_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
@@ -1283,6 +1287,13 @@ def api_color_parchi_preview_html():
             return jsonify({'error': 'सत्र समाप्त हो गया है। कृपया पुनः फ़ाइल चुनें।'}), 404
             
         voters = COLOR_PARCHI_CACHE[session_id]['parsed']['voters']
+        custom_booth = data.get('booth_address') or candidate_info.get('booth_address')
+        if custom_booth and str(custom_booth).strip():
+            clean_b = str(custom_booth).strip()
+            for v in voters:
+                v['booth_address'] = clean_b
+            if session_id in COLOR_PARCHI_CACHE:
+                COLOR_PARCHI_CACHE[session_id]['parsed']['default_booth_address'] = clean_b
         candidate_info['jila_parishad'] = candidate_info.get('jila_parishad') or data.get('jila_parishad') or COLOR_PARCHI_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         candidate_info['panchayat_samiti'] = candidate_info.get('panchayat_samiti') or data.get('panchayat_samiti') or COLOR_PARCHI_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
         COLOR_PARCHI_CACHE[session_id]['custom_candidate_info'] = candidate_info
@@ -1322,6 +1333,13 @@ def api_color_parchi_export_pdf():
             return jsonify({'error': 'सत्र समाप्त हो गया है। कृपया पुनः फ़ाइल चुनें।'}), 404
             
         voters = COLOR_PARCHI_CACHE[session_id]['parsed']['voters']
+        custom_booth = data.get('booth_address') or candidate_info.get('booth_address')
+        if custom_booth and str(custom_booth).strip():
+            clean_b = str(custom_booth).strip()
+            for v in voters:
+                v['booth_address'] = clean_b
+            if session_id in COLOR_PARCHI_CACHE:
+                COLOR_PARCHI_CACHE[session_id]['parsed']['default_booth_address'] = clean_b
         candidate_info['jila_parishad'] = candidate_info.get('jila_parishad') or data.get('jila_parishad') or COLOR_PARCHI_CACHE[session_id]['parsed'].get('default_jila_parishad', '')
         candidate_info['panchayat_samiti'] = candidate_info.get('panchayat_samiti') or data.get('panchayat_samiti') or COLOR_PARCHI_CACHE[session_id]['parsed'].get('default_panchayat_samiti', '')
         COLOR_PARCHI_CACHE[session_id]['custom_candidate_info'] = candidate_info
@@ -1344,7 +1362,8 @@ def api_color_parchi_export_pdf():
             'show_page_number': str(show_page_number).lower(),
             'filter_active_only': str(filter_active_only).lower(),
             'jila_parishad': candidate_info.get('jila_parishad', ''),
-            'panchayat_samiti': candidate_info.get('panchayat_samiti', '')
+            'panchayat_samiti': candidate_info.get('panchayat_samiti', ''),
+            'booth_address': (data.get('booth_address') or candidate_info.get('booth_address') or (voters[0].get('booth_address') if voters else ''))
         }
         if range_from:
             print_params['range_from'] = range_from
@@ -1408,6 +1427,11 @@ def color_parchi_print_standalone():
             return "<h3>सत्र समाप्त हो गया है। कृपया मुख्य पोर्टल से पुनः प्रिंट बटन दबाएं।</h3>", 404
             
         voters = COLOR_PARCHI_CACHE[session_id]['parsed']['voters']
+        custom_booth = request.args.get('booth_address')
+        if custom_booth and str(custom_booth).strip():
+            clean_b = str(custom_booth).strip()
+            for v in voters:
+                v['booth_address'] = clean_b
         
         candidate_info = {
             'candidate_name': request.args.get('candidate_name', 'संजय कुमार मेवाड़ा'),

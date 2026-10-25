@@ -933,6 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const parchiLayoutTypeSelect = document.getElementById('parchiLayoutTypeSelect');
     const parchiShowPageNumCheck = document.getElementById('parchiShowPageNumCheck');
     const parchiPanchayatInput = document.getElementById('parchiPanchayatInput');
+    const parchiBoothInput = document.getElementById('parchiBoothInput');
     const parchiVotingTimeInput = document.getElementById('parchiVotingTimeInput');
     const parchiJilaParishadInput = document.getElementById('parchiJilaParishadInput');
     const parchiPanchayatSamitiInput = document.getElementById('parchiPanchayatSamitiInput');
@@ -1151,6 +1152,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (parchiPanchayatInput) {
             parchiPanchayatInput.value = data.default_panchayat_name || 'ग्राम पंचायत';
         }
+        if (parchiBoothInput && (data.default_booth_address || data.booth_address)) {
+            parchiBoothInput.value = data.default_booth_address || data.booth_address || '';
+        }
         if (parchiJilaParishadInput) {
             parchiJilaParishadInput.value = parchiState.jilaParishad;
         }
@@ -1215,10 +1219,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const showPageNum = parchiShowPageNumCheck ? parchiShowPageNumCheck.checked : true;
             const jp = parchiJilaParishadInput ? parchiJilaParishadInput.value.trim() : (parchiState.jilaParishad || '');
             const ps = parchiPanchayatSamitiInput ? parchiPanchayatSamitiInput.value.trim() : (parchiState.panchayatSamiti || '');
+            const bAddr = parchiBoothInput ? parchiBoothInput.value.trim() : '';
 
             const payload = {
                 session_id: parchiState.sessionId,
                 panchayat_name: parchiPanchayatInput ? parchiPanchayatInput.value.trim() || 'ग्राम पंचायत' : 'ग्राम पंचायत',
+                booth_address: bAddr,
                 voting_time: parchiVotingTimeInput ? parchiVotingTimeInput.value.trim() || 'प्रातः 7 से सायं 6 बजे तक' : 'प्रातः 7 से सायं 6 बजे तक',
                 filter_active_only: parchiActiveOnlyCheck ? parchiActiveOnlyCheck.checked : true,
                 layout_type: layoutType,
@@ -1285,6 +1291,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (parchiBoothInput) {
+        let pBoothTimer = null;
+        parchiBoothInput.addEventListener('input', () => {
+            clearTimeout(pBoothTimer);
+            pBoothTimer = setTimeout(() => {
+                fetchParchiPreview();
+            }, 500);
+        });
+    }
+
     // 8. Pagination Buttons
     if (parchiPrevPageBtn) {
         parchiPrevPageBtn.addEventListener('click', () => {
@@ -1327,6 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const pName = encodeURIComponent((parchiPanchayatInput ? parchiPanchayatInput.value.trim() : '') || 'ग्राम पंचायत');
+            const bAddr = encodeURIComponent((parchiBoothInput ? parchiBoothInput.value.trim() : '') || '');
             const vTime = encodeURIComponent((parchiVotingTimeInput ? parchiVotingTimeInput.value.trim() : '') || 'प्रातः 7 से सायं 6 बजे तक');
             const actOnly = parchiActiveOnlyCheck ? parchiActiveOnlyCheck.checked : true;
             const layoutType = parchiLayoutTypeSelect ? parchiLayoutTypeSelect.value : '12';
@@ -1334,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const jp = encodeURIComponent((parchiJilaParishadInput ? parchiJilaParishadInput.value.trim() : parchiState.jilaParishad) || '');
             const ps = encodeURIComponent((parchiPanchayatSamitiInput ? parchiPanchayatSamitiInput.value.trim() : parchiState.panchayatSamiti) || '');
 
-            const printUrl = `/parchi/print?session_id=${parchiState.sessionId}&panchayat_name=${pName}&voting_time=${vTime}&filter_active_only=${actOnly}&layout_type=${layoutType}&show_page_number=${showPageNum}&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+            const printUrl = `/parchi/print?session_id=${parchiState.sessionId}&panchayat_name=${pName}&booth_address=${bAddr}&voting_time=${vTime}&filter_active_only=${actOnly}&layout_type=${layoutType}&show_page_number=${showPageNum}&jila_parishad=${jp}&panchayat_samiti=${ps}`;
             
             const printWin = window.open(printUrl, '_blank');
             if (!printWin) {
@@ -1362,14 +1379,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const jp = parchiJilaParishadInput ? parchiJilaParishadInput.value.trim() : (parchiState.jilaParishad || '');
             const ps = parchiPanchayatSamitiInput ? parchiPanchayatSamitiInput.value.trim() : (parchiState.panchayatSamiti || '');
             const pName = encodeURIComponent(parchiPanchayatInput ? parchiPanchayatInput.value.trim() || 'ग्राम पंचायत' : 'ग्राम पंचायत');
+            const bAddr = parchiBoothInput ? parchiBoothInput.value.trim() : '';
             const vTime = encodeURIComponent(parchiVotingTimeInput ? parchiVotingTimeInput.value.trim() || 'प्रातः 7 से सायं 6 बजे तक' : 'प्रातः 7 से सायं 6 बजे तक');
             const actOnly = parchiActiveOnlyCheck ? parchiActiveOnlyCheck.checked : true;
-            const fallbackPrintUrl = `/parchi/print?session_id=${parchiState.sessionId}&panchayat_name=${pName}&voting_time=${vTime}&filter_active_only=${actOnly}&layout_type=${layoutType}&show_page_number=${showPageNum}&jila_parishad=${encodeURIComponent(jp)}&panchayat_samiti=${encodeURIComponent(ps)}`;
+            const fallbackPrintUrl = `/parchi/print?session_id=${parchiState.sessionId}&panchayat_name=${pName}&booth_address=${encodeURIComponent(bAddr)}&voting_time=${vTime}&filter_active_only=${actOnly}&layout_type=${layoutType}&show_page_number=${showPageNum}&jila_parishad=${encodeURIComponent(jp)}&panchayat_samiti=${encodeURIComponent(ps)}`;
 
             try {
                 const payload = {
                     session_id: parchiState.sessionId,
                     panchayat_name: parchiPanchayatInput ? parchiPanchayatInput.value.trim() || 'ग्राम पंचायत' : 'ग्राम पंचायत',
+                    booth_address: bAddr,
                     voting_time: parchiVotingTimeInput ? parchiVotingTimeInput.value.trim() || 'प्रातः 7 से सायं 6 बजे तक' : 'प्रातः 7 से सायं 6 बजे तक',
                     filter_active_only: parchiActiveOnlyCheck ? parchiActiveOnlyCheck.checked : true,
                     layout_type: layoutType,
@@ -1516,6 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorCandidateNameInput = document.getElementById('colorCandidateNameInput');
     const colorButtonNoInput = document.getElementById('colorButtonNoInput');
     const colorSloganInput = document.getElementById('colorSloganInput');
+    const colorBoothInput = document.getElementById('colorBoothInput');
     const colorJilaParishadInput = document.getElementById('colorJilaParishadInput');
     const colorPanchayatSamitiInput = document.getElementById('colorPanchayatSamitiInput');
 
@@ -1646,7 +1666,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Attach input listeners to all candidate fields for live instant feedback
+    // Attach input listeners to all candidate & location fields for live instant feedback
     [
         colorHeaderPrefixInput,
         colorWardBadgeInput,
@@ -1656,10 +1676,18 @@ document.addEventListener('DOMContentLoaded', () => {
         colorSloganInput,
         colorPosterBgColorInput,
         colorNameColorInput,
-        colorBtnColorInput
+        colorBtnColorInput,
+        colorBoothInput,
+        colorVotingTimeInput,
+        colorJilaParishadInput,
+        colorPanchayatSamitiInput
     ].forEach(el => {
         if (el) {
-            el.addEventListener('input', updateMiniPosterLivePreview);
+            el.addEventListener('input', () => {
+                updateMiniPosterLivePreview();
+                clearTimeout(el._previewTimer);
+                el._previewTimer = setTimeout(fetchColorParchiPreview, 500);
+            });
             el.addEventListener('change', () => {
                 updateMiniPosterLivePreview();
                 fetchColorParchiPreview();
@@ -1921,6 +1949,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function gatherCandidateInfo() {
         const jp = colorJilaParishadInput ? colorJilaParishadInput.value.trim() : (colorState.jilaParishad || '');
         const ps = colorPanchayatSamitiInput ? colorPanchayatSamitiInput.value.trim() : (colorState.panchayatSamiti || '');
+        const boothAddr = colorBoothInput ? colorBoothInput.value.trim() : '';
         return {
             header_prefix: colorHeaderPrefixInput?.value.trim() || 'पार्षद पद हेतु वार्ड नं',
             ward_badge: colorWardBadgeInput?.value.trim() || '03',
@@ -1937,6 +1966,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn_box_color: colorBtnColorInput?.value || '#0284c7',
             voting_time: colorVotingTimeInput?.value.trim() || 'प्रातः 7 से सायं 6 बजे तक',
             time_color: colorTimeColorInput?.value || '#e11d48',
+            booth_address: boothAddr,
             jila_parishad: jp,
             panchayat_samiti: ps
         };
@@ -2085,6 +2115,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.default_panchayat_name && colorWardBadgeInput) {
             const match = data.default_panchayat_name.match(/\d+/);
             if (match) colorWardBadgeInput.value = match[0].padStart(2, '0');
+        }
+        if (colorBoothInput && (data.default_booth_address || data.booth_address)) {
+            colorBoothInput.value = data.default_booth_address || data.booth_address || '';
         }
         if (colorJilaParishadInput) {
             colorJilaParishadInput.value = colorState.jilaParishad;
@@ -2340,7 +2373,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cand = gatherCandidateInfo();
                 const jp = encodeURIComponent(cand.jila_parishad || '');
                 const ps = encodeURIComponent(cand.panchayat_samiti || '');
-                const printUrl = `/color_parchi/print?session_id=${colorState.sessionId}&layout_type=${layoutType}&show_page_number=${showPageNum}&filter_active_only=${filterActive}&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+                const bAddr = encodeURIComponent(cand.booth_address || '');
+                const printUrl = `/color_parchi/print?session_id=${colorState.sessionId}&layout_type=${layoutType}&show_page_number=${showPageNum}&filter_active_only=${filterActive}&booth_address=${bAddr}&jila_parishad=${jp}&panchayat_samiti=${ps}`;
                 const printWin = window.open(printUrl, '_blank');
                 if (!printWin) {
                     alert('कृपया अपने ब्राउज़र में पॉप-अप (Pop-ups) की अनुमति दें ताकि प्रिंट डायलॉग खुल सके।');
@@ -2371,7 +2405,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const cand = gatherCandidateInfo();
             const jp = encodeURIComponent(cand.jila_parishad || '');
             const ps = encodeURIComponent(cand.panchayat_samiti || '');
-            const fallbackPrintUrl = `/color_parchi/print?session_id=${colorState.sessionId}&layout_type=${layoutType}&show_page_number=${showPageNum}&filter_active_only=${filterActive}&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+            const bAddr = encodeURIComponent(cand.booth_address || '');
+            const fallbackPrintUrl = `/color_parchi/print?session_id=${colorState.sessionId}&layout_type=${layoutType}&show_page_number=${showPageNum}&filter_active_only=${filterActive}&booth_address=${bAddr}&jila_parishad=${jp}&panchayat_samiti=${ps}`;
 
             try {
                 const payload = {
@@ -4921,6 +4956,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Global Editable Inputs
         const feat8PanchayatInput = document.getElementById('feat8PanchayatInput');
+        const feat8BoothInput = document.getElementById('feat8BoothInput');
         const feat8VotingTimeInput = document.getElementById('feat8VotingTimeInput');
         const feat8JilaParishadInput = document.getElementById('feat8JilaParishadInput');
         const feat8PanchayatSamitiInput = document.getElementById('feat8PanchayatSamitiInput');
@@ -5157,6 +5193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Update Editable Global Inputs
             if (feat8PanchayatInput) feat8PanchayatInput.value = f8State.panchayatName;
+            if (feat8BoothInput) feat8BoothInput.value = f8State.boothAddress;
             if (feat8JilaParishadInput) feat8JilaParishadInput.value = f8State.jilaParishad;
             if (feat8PanchayatSamitiInput) feat8PanchayatSamitiInput.value = f8State.panchayatSamiti;
 
@@ -5236,6 +5273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const layout = feat8ParchiLayoutSelect ? feat8ParchiLayoutSelect.value : '12';
                 const showPage = feat8ParchiShowPageNumCheck ? feat8ParchiShowPageNumCheck.checked : true;
                 const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const bAddr = feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress;
                 const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
                 const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
                 const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
@@ -5246,6 +5284,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         session_id: f8State.sessionId,
                         panchayat_name: pName,
+                        booth_address: bAddr,
                         voting_time: vTime,
                         layout_type: layout,
                         show_page_number: showPage,
@@ -5289,10 +5328,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const layout = feat8ParchiLayoutSelect ? feat8ParchiLayoutSelect.value : '12';
                 const showPage = feat8ParchiShowPageNumCheck ? feat8ParchiShowPageNumCheck.checked : true;
                 const pName = encodeURIComponent(feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName);
+                const bAddr = encodeURIComponent(feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress);
                 const vTime = encodeURIComponent(feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक');
                 const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
                 const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
-                const printUrl = `/parchi/print?session_id=${f8State.sessionId}&panchayat_name=${pName}&voting_time=${vTime}&layout_type=${layout}&show_page_number=${showPage}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+                const printUrl = `/parchi/print?session_id=${f8State.sessionId}&panchayat_name=${pName}&booth_address=${bAddr}&voting_time=${vTime}&layout_type=${layout}&show_page_number=${showPage}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
                 window.open(printUrl, '_blank');
             });
         }
@@ -5308,6 +5348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const layout = feat8ParchiLayoutSelect ? feat8ParchiLayoutSelect.value : '12';
                 const showPage = feat8ParchiShowPageNumCheck ? feat8ParchiShowPageNumCheck.checked : true;
                 const pName = feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName;
+                const bAddr = feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress;
                 const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
                 const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
                 const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
@@ -5319,6 +5360,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: JSON.stringify({
                             session_id: f8State.sessionId,
                             panchayat_name: pName,
+                            booth_address: bAddr,
                             voting_time: vTime,
                             filter_active_only: true,
                             layout_type: layout,
@@ -5391,6 +5433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
                 const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
                 const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+                const bAddr = feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress;
 
                 const candidateInfo = {
                     candidate_name: candName,
@@ -5403,6 +5446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     custom_symbol_data: f8State.uploadedSymbolDataUrl,
                     candidate_photo_data: f8State.uploadedPhotoDataUrl,
                     voting_time: vTime,
+                    booth_address: bAddr,
                     jila_parishad: jp,
                     panchayat_samiti: ps
                 };
@@ -5413,6 +5457,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         session_id: f8State.sessionId,
                         candidate_info: candidateInfo,
+                        booth_address: bAddr,
                         layout_type: layout,
                         show_page_number: true,
                         filter_active_only: true,
@@ -5460,6 +5505,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
                 const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
                 const vTime = encodeURIComponent(feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक');
+                const bAddrRaw = feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress;
+                const bAddr = encodeURIComponent(bAddrRaw);
 
                 // Save custom candidate info in backend session first
                 await fetch('/api/color_parchi/preview_html', {
@@ -5478,9 +5525,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             custom_symbol_data: f8State.uploadedSymbolDataUrl,
                             candidate_photo_data: f8State.uploadedPhotoDataUrl,
                             voting_time: feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक',
+                            booth_address: bAddrRaw,
                             jila_parishad: feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad,
                             panchayat_samiti: feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti
                         },
+                        booth_address: bAddrRaw,
                         layout_type: layout,
                         show_page_number: true,
                         filter_active_only: true,
@@ -5488,7 +5537,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                 });
 
-                const printUrl = `/color_parchi/print?session_id=${f8State.sessionId}&layout_type=${layout}&show_page_number=true&filter_active_only=true&candidate_name=${candName}&header_prefix=${headerPrefix}&ward_badge=${wardBadge}&button_no=${buttonNo}&slogan=${slogan}&symbol_preset=${sym}&jila_parishad=${jp}&panchayat_samiti=${ps}&voting_time=${vTime}`;
+                const printUrl = `/color_parchi/print?session_id=${f8State.sessionId}&layout_type=${layout}&show_page_number=true&filter_active_only=true&candidate_name=${candName}&header_prefix=${headerPrefix}&ward_badge=${wardBadge}&button_no=${buttonNo}&slogan=${slogan}&symbol_preset=${sym}&booth_address=${bAddr}&jila_parishad=${jp}&panchayat_samiti=${ps}&voting_time=${vTime}`;
                 window.open(printUrl, '_blank');
             });
         }
@@ -5511,6 +5560,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const vTime = feat8VotingTimeInput ? feat8VotingTimeInput.value.trim() : 'प्रातः 7 से सायं 6 बजे तक';
                 const jp = feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad;
                 const ps = feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti;
+                const bAddr = feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress;
 
                 const candidateInfo = {
                     candidate_name: candName,
@@ -5523,6 +5573,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     custom_symbol_data: f8State.uploadedSymbolDataUrl,
                     candidate_photo_data: f8State.uploadedPhotoDataUrl,
                     voting_time: vTime,
+                    booth_address: bAddr,
                     jila_parishad: jp,
                     panchayat_samiti: ps
                 };
@@ -5534,6 +5585,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: JSON.stringify({
                             session_id: f8State.sessionId,
                             candidate_info: candidateInfo,
+                            booth_address: bAddr,
                             layout_type: layout,
                             show_page_number: true,
                             filter_active_only: true
@@ -5631,9 +5683,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!f8State.sessionId) return;
                 const ward = feat8AlphaWardSelect ? feat8AlphaWardSelect.value : 'all';
                 const pName = encodeURIComponent(feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName);
+                const bAddr = encodeURIComponent(feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress);
                 const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
                 const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
-                const printUrl = `/alphabetical/print?session_id=${f8State.sessionId}&selected_ward=${ward}&ward_title=${pName}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+                const printUrl = `/alphabetical/print?session_id=${f8State.sessionId}&selected_ward=${ward}&ward_title=${pName}&booth_address=${bAddr}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
                 window.open(printUrl, '_blank');
             });
         }
@@ -5797,9 +5850,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const ward = feat8FamilyWardSelect ? feat8FamilyWardSelect.value : 'all';
                 const minSize = feat8FamilyMinSizeSelect ? parseInt(feat8FamilyMinSizeSelect.value) : 2;
                 const pName = encodeURIComponent(feat8PanchayatInput ? feat8PanchayatInput.value.trim() : f8State.panchayatName);
+                const bAddr = encodeURIComponent(feat8BoothInput ? feat8BoothInput.value.trim() : f8State.boothAddress);
                 const jp = encodeURIComponent(feat8JilaParishadInput ? feat8JilaParishadInput.value.trim() : f8State.jilaParishad);
                 const ps = encodeURIComponent(feat8PanchayatSamitiInput ? feat8PanchayatSamitiInput.value.trim() : f8State.panchayatSamiti);
-                const printUrl = `/family/print?session_id=${f8State.sessionId}&selected_ward=${ward}&min_family_size=${minSize}&ward_title=${pName}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
+                const printUrl = `/family/print?session_id=${f8State.sessionId}&selected_ward=${ward}&min_family_size=${minSize}&ward_title=${pName}&booth_address=${bAddr}&filter_active_only=true&jila_parishad=${jp}&panchayat_samiti=${ps}`;
                 window.open(printUrl, '_blank');
             });
         }
@@ -5902,6 +5956,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
+        // Live Debounced Sync for Feature 8 Header Inputs
+        function refreshCurrentFeat8SubTab() {
+            if (!f8State.sessionId) return;
+            if (f8State.activeSubTab === 'parchi') fetchFeat8ParchiPreview();
+            else if (f8State.activeSubTab === 'color') fetchFeat8ColorPreview();
+            else if (f8State.activeSubTab === 'alpha') fetchFeat8AlphaPreview();
+            else if (f8State.activeSubTab === 'family') fetchFeat8FamilyPreview();
+        }
+
+        [feat8BoothInput, feat8PanchayatInput, feat8VotingTimeInput, feat8JilaParishadInput, feat8PanchayatSamitiInput].forEach(inp => {
+            if (inp) {
+                let debounceTimer = null;
+                inp.addEventListener('input', () => {
+                    if (inp === feat8BoothInput) f8State.boothAddress = inp.value.trim();
+                    if (inp === feat8PanchayatInput) f8State.panchayatName = inp.value.trim();
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(refreshCurrentFeat8SubTab, 500);
+                });
+                inp.addEventListener('change', () => {
+                    if (inp === feat8BoothInput) f8State.boothAddress = inp.value.trim();
+                    if (inp === feat8PanchayatInput) f8State.panchayatName = inp.value.trim();
+                    refreshCurrentFeat8SubTab();
+                });
+            }
+        });
     }
 
     // Initialize District Automation

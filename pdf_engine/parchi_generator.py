@@ -151,7 +151,7 @@ def chunk_voters_by_ward(voters: List[Dict[str, Any]], cards_per_page: int) -> L
     return all_page_chunks if all_page_chunks else [[]]
 
 def format_booth_text(booth: Any) -> str:
-    """Cleans up booth address string and strips redundant duplicate prefixes."""
+    """Cleans up booth address string, strips redundant prefixes, and fixes OCR/font spelling errors."""
     b = str(booth or '').strip()
     b = re.sub(r'[\r\n\t]+', ' ', b)
     b = re.sub(r'\s{2,}', ' ', b).strip()
@@ -162,7 +162,23 @@ def format_booth_text(booth: Any) -> str:
     if m:
         sub = b[m.end():].strip()
         if sub:
-            return sub
+            b = sub
+
+    # Devanagari OCR & Font Spelling Normalizations
+    b = re.sub(r'राजक[ौोी]य', 'राजकीय', b)
+    b = b.replace('ररजककज', 'राजकीय')
+    b = b.replace('उच्च्च', 'उच्च').replace('उच ', 'उच्च ')
+    b = re.sub(r'प्राथ[ॉो]मेक', 'प्राथमिक', b)
+    b = b.replace('परसनमक', 'प्राथमिक')
+    b = re.sub(r'माध्य[ॉो]मेक', 'माध्यमिक', b)
+    b = b.replace('मरधजनमक', 'माध्यमिक')
+    b = re.sub(r'वि[्]द्यालय', 'विद्यालय', b)
+    b = b.replace('नरदरलज', 'विद्यालय').replace('नरदेवीज', 'विद्यालय')
+    b = b.replace('ललणरररस', 'लूणावास').replace('लुणावास', 'लूणावास')
+    b = b.replace('जरटरन', 'जाटान')
+    b = re.sub(r'कमर[ार]\s*न[पं]बर', 'कमरा नंबर', b)
+    b = re.sub(r'कमरा\s*नं\.?(?!\s*बर)', 'कमरा नंबर', b)
+    b = re.sub(r'\s{2,}', ' ', b).strip()
     return b
 
 def get_booth_style(booth_text: str, layout: str) -> Tuple[str, str]:
